@@ -1,0 +1,8 @@
+.driftingBg{
+  background-image: url('https://media1.tenor.com/m/BG6HXwc5I5oAAAAd/bmw.gif');
+  background-size: cover;
+  background-position: center;
+  background-repeat: repeat;
+  min-height: 100vh; /* or 100% if you want only the container */
+  width: 100%;
+}

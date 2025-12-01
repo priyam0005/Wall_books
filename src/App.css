@@ -1,0 +1,22 @@
+.app-container{
+  display:flex;
+ 
+}
+
+.content{
+  width:100%;
+}
+
+.nex {
+  margin-top: 20px;
+  margin-right: 5px;
+}
+
+.driftingBg{
+  background-image: url('https://tenor.com/view/bmw-gif-319341465802711962');
+  background-size: cover;
+  background-position: center;
+  background-repeat: repeat;
+  min-height: 100vh; /* or 100% if you want only the container */
+  width: 100%;
+}

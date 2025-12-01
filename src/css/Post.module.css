@@ -1,0 +1,31 @@
+/* Add this to your CSS file */
+  .cardTitle{
+  font-size: 2rem;
+  font-weight: bold;
+  background: linear-gradient(90deg, #ff512f 0%, #dd2476 100%);
+  background-clip: text;              /* Standard property for compatibility */
+  -webkit-background-clip: text;      /* For Safari/Chrome */
+  -webkit-text-fill-color: transparent;
+  text-shadow: 1px 1px 8px rgba(221,36,118,0.15);
+  letter-spacing: 1px;
+  margin-bottom:0.75rem }
+
+  .cardHeader{
+  font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #23272f;
+  background: linear-gradient(90deg, #f8fafc 60%, #e9ecef 100%);
+  border-bottom: 1px solid #e0e4ea;
+  letter-spacing: 0.03em;
+  padding: 0.85rem 1.25rem;
+  border-radius: 0.75rem 0.75rem 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px 0 rgba(60,72,88,0.04);
+  transition: background 0.3s;
+}
+
+.cardHeader:hover{
+  background: linear-gradient(90deg, #f1f3f6 60%, #e3e7ed 100%);}

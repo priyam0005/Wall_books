@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Scrollbar customization */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #444;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-track {
+  background-color: #111;
+}
+
+@layer base {
+  body {
+    @apply bg-[#0a0a0a] text-gray-100 transition-colors duration-300;
+  }
+}
