@@ -5,11 +5,13 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { thought } from '../store/thoughts/getThought';
 import { createThought } from '../store/thoughts/createThought';
+import chica from '../assets/chica.gif';
 
 const HomePage = () => {
   const [wallbooks, setWallbooks] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -57,6 +59,7 @@ const HomePage = () => {
         liked: false,
       }));
       setWallbooks(mappedWallbooks);
+      setIsLoading(false);
     }
   }, [feedData]);
 
@@ -285,6 +288,25 @@ const HomePage = () => {
           {wallbooks.map((w, i) => (
             <FloatingWallbook key={w.id} wallbook={w} index={i} />
           ))}
+        </AnimatePresence>
+
+        {/* Loading GIF Overlay */}
+        <AnimatePresence>
+          {isLoading && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5 }}
+              className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
+            >
+              <img 
+                src={chica} 
+                alt="Loading" 
+                className="max-w-full max-h-full object-contain"
+              />
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
 
