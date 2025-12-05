@@ -9,7 +9,7 @@ import io from 'socket.io-client';
 import { BookOpen } from 'lucide-react';
 import mikugif from '../assets/anime-dance.gif';
 
-const SOCKET_URL = 'https://r01ck4rh-405.inc1.devtunnels.ms';
+const SOCKET_URL = 'https://sc-net.onrender.com';
 
 function SettingsModal({
   isOpen,
