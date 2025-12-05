@@ -7,7 +7,7 @@ export const thought = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get(
-        'https://sc-net.onrender.comauth/api/thoughts/feed'
+        'https://sc-net.onrender.com/auth/api/thoughts/feed'
       );
 
       if (response && response.data) {
