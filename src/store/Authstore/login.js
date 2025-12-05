@@ -6,7 +6,7 @@ export const loginUser = createAsyncThunk(
   async ({ email, password }, thunkAPI) => {
     try {
       const response = await axios.post(
-        'https://r01ck4rh-405.inc1.devtunnels.ms/register/login',
+        'https://sc-net.onrender.com/register/login',
         {
           email,
           password,

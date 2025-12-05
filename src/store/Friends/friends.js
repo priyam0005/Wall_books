@@ -5,7 +5,7 @@ import axios from 'axios';
 export const friends = createAsyncThunk('/friend', async ({ token }) => {
   try {
     const response = await axios.get(
-      'https://r01ck4rh-405.inc1.devtunnels.ms/auth/friends',
+      'https://sc-net.onrender.com/auth/friends',
       {
         headers: {
           Authorization: `Bearer ${token}`,

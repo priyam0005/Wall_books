@@ -10,7 +10,7 @@ export const createThought = createAsyncThunk(
       }
 
       const response = await axios.post(
-        'https://r01ck4rh-405.inc1.devtunnels.ms/auth/api/thoughts',
+        'https://sc-net.onrender.com/auth/api/thoughts',
         { content },
         {
           headers: {

@@ -10,7 +10,7 @@ export const Reqlist = createAsyncThunk(
   async ({ token }) => {
     try {
       const response = await axios.get(
-        'https://r01ck4rh-405.inc1.devtunnels.ms/auth/userReq',
+        'https://sc-net.onrender.com/auth/userReq',
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -36,7 +36,7 @@ export const ReqAction = createAsyncThunk(
   async ({ token, type, senderId }) => {
     try {
       const response = await axios.post(
-        `https://r01ck4rh-405.inc1.devtunnels.ms/auth/${type}`,
+        `https://sc-net.onrender.com/auth/${type}`,
         {
           senderId,
         },

@@ -8,7 +8,7 @@ export const connected = createAsyncThunk(
   async ({ token, Reciever_Id }, thunkAPI) => {
     try {
       const response = await axios.post(
-        `http://localhost:405/auth/reqList/${Reciever_Id}`,
+        `https://sc-net.onrender.com/auth/reqList/${Reciever_Id}`,
         {},
         {
           headers: {

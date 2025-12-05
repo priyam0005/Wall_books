@@ -9,7 +9,7 @@ export const Friends = createAsyncThunk('/nooob', async ({ id }, thunkAPI) => {
     }
 
     const response = await axios.get(
-      `https://r01ck4rh-405.inc1.devtunnels.ms/auth/friendList/${id}`
+      `https://sc-net.onrender.com/auth/friendList/${id}`
     );
 
     if (response && response.data) {

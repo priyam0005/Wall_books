@@ -10,7 +10,7 @@ export const ShowProfile = createAsyncThunk(
     console.log(userId);
     try {
       const response = await axios.get(
-        `https://r01ck4rh-405.inc1.devtunnels.ms/auth/Profile/${userId}`
+        `https://sc-net.onrender.com/auth/Profile/${userId}`
       );
 
       if (response) {

@@ -14,7 +14,7 @@ export const getUserThoughts = createAsyncThunk(
       }
 
       const response = await axios.get(
-        `https://r01ck4rh-405.inc1.devtunnels.ms/auth/api/thoughts/user/${userId}`,
+        `https://sc-net.onrender.com/auth/api/thoughts/user/${userId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

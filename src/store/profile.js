@@ -12,7 +12,7 @@ export const PostUser = createAsyncThunk(
   async ({ profilePic, displayName, bio, mood }, thunkAPI) => {
     try {
       const response = await axios.put(
-        'https://r01ck4rh-405.inc1.devtunnels.ms/auth/userProfile',
+        'https://sc-net.onrender.com/auth/userProfile',
 
         { profilePic, displayName, bio, mood },
 
