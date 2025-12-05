@@ -21,7 +21,7 @@ const UserSearchResults = () => {
 
     try {
       const response = await axios.get(
-        `https://r01ck4rh-405.inc1.devtunnels.ms/auth/user/${searchQuery}`,
+        `https://sc-net.onrender.com/auth/user/${searchQuery}`,
         { headers: { 'Content-Type': 'application/json' }, timeout: 10000 }
       );
       setResult(response.data);
