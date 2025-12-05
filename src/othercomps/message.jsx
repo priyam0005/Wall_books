@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import io from 'socket.io-client';
 import { BookOpen } from 'lucide-react';
+import mikugif from '../assets/anime-dance.gif';
 
 const SOCKET_URL = 'https://r01ck4rh-405.inc1.devtunnels.ms';
 
@@ -361,6 +362,8 @@ export default function PublicChat() {
   const [isConnected, setIsConnected] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
   const [profilePic, setProfilePic] = useState('');
+  const [isLoadingMessages, setIsLoadingMessages] = useState(true); // NEW: Loading state
+  const [isFading, setIsFading] = useState(false); // NEW: Fade animation state
   const messagesEndRef = useRef(null);
   const socketRef = useRef(null);
   const messageInputRef = useRef(null);
@@ -416,6 +419,12 @@ export default function PublicChat() {
 
     socketRef.current.on('public_chat_history', (msgs) => {
       setMessages(msgs.reverse());
+
+      // NEW: Start fade out animation when messages are loaded
+      setIsFading(true);
+      setTimeout(() => {
+        setIsLoadingMessages(false);
+      }, 500); // Wait for fade animation to complete
     });
 
     socketRef.current.on('received_message', (msg) => {
@@ -546,6 +555,38 @@ export default function PublicChat() {
 
   return (
     <div className="h-screen flex items-center justify-center from-gray-900 via-black to-gray-800">
+      {/* NEW: Miku Loading Overlay */}
+      {isLoadingMessages && (
+        <div
+          className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-500 ${
+            isFading ? 'opacity-0' : 'opacity-100'
+          }`}
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+          }}
+        >
+          <div
+            className={`flex flex-col items-center transition-all duration-500 ${
+              isFading ? 'scale-90 opacity-0' : 'scale-100 opacity-100'
+            }`}
+          >
+            <img
+              src={mikugif}
+              alt="Loading..."
+              className="w-80 h-80 object-contain"
+              style={{
+                filter: 'drop-shadow(0 0 30px rgba(0, 255, 255, 0.4))',
+                mixBlendMode: 'multiply',
+                backgroundColor: 'transparent',
+              }}
+            />
+            <p className="mt-4 text-cyan-400 text-xl font-semibold drop-shadow-lg animate-pulse">
+              Loading Messages...
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="h-screen w-full max-w-4xl flex flex-col bg-gray-900 border-l border-r border-gray-800">
         <div className="from-gray-900 via-black to-gray-800 border-b border-gray-700 px-4 py-3 flex items-center rounded-lg justify-between shadow-lg flex-shrink-0">
           <div className="flex items-center space-x-3">

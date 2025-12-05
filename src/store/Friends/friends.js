@@ -4,11 +4,14 @@ import axios from 'axios';
 
 export const friends = createAsyncThunk('/friend', async ({ token }) => {
   try {
-    const response = await axios.get('http://localhost:405/auth/friends', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await axios.get(
+      'https://r01ck4rh-405.inc1.devtunnels.ms/auth/friends',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
     if (response && response.data) {
       return response.data.data;

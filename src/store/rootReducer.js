@@ -10,6 +10,9 @@ import Myconnet from './userProfile/connect';
 import connectV from './NotiFicationStore/ReqList';
 import friends from './Friends/friends';
 import dost from './Friends/newFriend';
+import feed from './thoughts/getThought';
+import create from './thoughts/createThought';
+import myThought from './thoughts/mythought';
 
 const rootReducer = combineReducers({
   just: login,
@@ -20,6 +23,9 @@ const rootReducer = combineReducers({
   ReqList: connectV,
   dost: friends,
   mitra: dost,
+  Iliana: feed,
+  Mi: myThought,
+  Amore: create,
 });
 
 export default rootReducer;

@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { Reqlist } from '../store/NotiFicationStore/ReqList';
 import { useEffect } from 'react';
 import NotificationCard from './notification';
+import { Bell, BellOff } from 'lucide-react';
 
 function Friendlist() {
   const dispatch = useDispatch();
@@ -28,46 +29,67 @@ function Friendlist() {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
-        <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-black border-b border-gray-800 sticky top-0 z-10">
-          <div className="max-w-4xl pl-3 mx-auto   py-4">
-            <h1 className="text-xl font-semibold text-white">Notifications</h1>
+      <div className="min-h-screen bg-black pb-20 md:pb-8">
+        {/* Header */}
+        <div className="bg-[#0a0a0a] border-b border-gray-800 sticky top-0 z-10">
+          <div className="max-w-3xl mx-auto px-4 md:px-6 py-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gray-900 rounded-lg border border-gray-800">
+                  <Bell className="w-5 h-5 md:w-6 md:h-6 text-gray-400" />
+                </div>
+                <div>
+                  <h1 className="text-xl md:text-2xl font-bold text-white">
+                    Notifications
+                  </h1>
+                  {list && list.length > 0 && (
+                    <p className="text-xs md:text-sm text-gray-400 mt-0.5">
+                      {list.length} pending{' '}
+                      {list.length === 1 ? 'request' : 'requests'}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {list && list.length > 0 && (
+                <div className="px-3 py-1.5 bg-gray-900 border border-gray-800 rounded-full">
+                  <span className="text-white text-sm font-semibold">
+                    {list.length}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
+        {/* Empty State */}
         {list && list.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-24">
-            <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-4">
-              <svg
-                className="w-10 h-10 text-gray-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                />
-              </svg>
+          <div className="flex flex-col items-center justify-center py-20 md:py-32 px-4">
+            <div className="mb-6">
+              <div className="w-24 h-24 md:w-28 md:h-28 bg-gray-900 rounded-full flex items-center justify-center border border-gray-800">
+                <BellOff className="w-12 h-12 md:w-14 md:h-14 text-gray-600" />
+              </div>
             </div>
-            <p className="text-gray-400 text-lg">No notifications yet</p>
+            <h3 className="text-white text-lg md:text-xl font-semibold mb-2">
+              All caught up!
+            </h3>
+            <p className="text-gray-400 text-sm md:text-base text-center max-w-sm">
+              No new notifications yet. We'll let you know when something
+              arrives.
+            </p>
           </div>
         )}
 
-        {list.map((user) => {
-          return (
-            <div className="max-w-4xl mx-auto px-4 py-2" key={user.userId}>
-              <div className="space-y-2 ">
-                <NotificationCard
-                  key={user.userId}
-                  user={user}
-                ></NotificationCard>
-              </div>
+        {/* Notifications List */}
+        {list && list.length > 0 && (
+          <div className="max-w-3xl mx-auto px-4 md:px-6 py-6">
+            <div className="space-y-3 md:space-y-4">
+              {list.map((user) => (
+                <NotificationCard key={user.userId} user={user} />
+              ))}
             </div>
-          );
-        })}
+          </div>
+        )}
       </div>
     </>
   );

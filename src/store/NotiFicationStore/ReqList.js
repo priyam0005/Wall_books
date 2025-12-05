@@ -9,11 +9,14 @@ export const Reqlist = createAsyncThunk(
 
   async ({ token }) => {
     try {
-      const response = await axios.get('http://localhost:405/auth/userReq', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axios.get(
+        'https://r01ck4rh-405.inc1.devtunnels.ms/auth/userReq',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (response && response.data) {
         console.log(response.data.data[0]);
@@ -33,7 +36,7 @@ export const ReqAction = createAsyncThunk(
   async ({ token, type, senderId }) => {
     try {
       const response = await axios.post(
-        `http://localhost:405/auth/${type}`,
+        `https://r01ck4rh-405.inc1.devtunnels.ms/auth/${type}`,
         {
           senderId,
         },

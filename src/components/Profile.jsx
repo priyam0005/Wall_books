@@ -8,6 +8,7 @@ import { userProfile } from '../store/userProfile/MyProfile';
 import LoadingPage from '../othercomps/loadingComp/loading';
 import { friends } from '../store/Friends/friends';
 import { BookOpen } from 'lucide-react';
+import { getUserThoughts } from '../store/thoughts/mythought';
 
 import {
   Instagram,
@@ -26,7 +27,6 @@ import {
   UserCheck,
   Settings,
 } from 'lucide-react';
-import { list } from 'postcss';
 
 const mockProfile = {
   name: 'Alex Chen',
@@ -103,6 +103,8 @@ export default function GenZProfileImproved() {
   const handleFollow = () => setIsFollowing(!isFollowing);
 
   const color = localStorage.getItem('color');
+  const [wallbooks, setWallbooks] = useState([]);
+  const [wallbooksLoading, setWallbooksLoading] = useState(true);
 
   const [wallbookColor, setWallbookColor] = useState(color || '#1db954');
 
@@ -120,10 +122,7 @@ export default function GenZProfileImproved() {
   };
 
   const token = localStorage.getItem('auth');
-  console.log(token);
-
   const navigate = useNavigate();
-
   const [loading, setLoading] = useState(false);
 
   const edit = () => {
@@ -131,8 +130,30 @@ export default function GenZProfileImproved() {
   };
 
   const [state, setState] = useState(false);
-  let { list } = useSelector((state) => state.dost);
-  console.log(list);
+  const { list } = useSelector((state) => state.dost);
+
+  const Na = JSON.parse(localStorage.getItem('user'));
+  const userId = Na._id;
+
+  const mylove = useSelector((state) => state.Mi?.thoughts || []);
+
+  const Iliana = async () => {
+    setWallbooksLoading(true);
+    try {
+      const result = await dispatch(getUserThoughts({ userId, token }));
+
+      if (getUserThoughts.fulfilled.match(result)) {
+        console.log('Thoughts fetched successfully:', result.payload);
+        setWallbooksLoading(false);
+      } else if (getUserThoughts.rejected.match(result)) {
+        console.log('Error fetching thoughts');
+        setWallbooksLoading(false);
+      }
+    } catch (error) {
+      console.log('Error in Iliana:', error);
+      setWallbooksLoading(false);
+    }
+  };
 
   const yours = async () => {
     try {
@@ -163,7 +184,7 @@ export default function GenZProfileImproved() {
       } else if (userProfile.pending.match(result)) {
         setLoading(true);
       } else if (userProfile.rejected.match(result)) {
-        console.log('the request got rejeceted');
+        console.log('the request got rejected');
         setLoading(false);
       }
       setLoading(false);
@@ -176,23 +197,38 @@ export default function GenZProfileImproved() {
   const ours = async (e) => {
     console.log(e);
     localStorage.removeItem('color');
-
     localStorage.setItem('color', e);
   };
 
   const handlecclick = async (e) => {
-    let userId = e;
+    const clickedUserId = e;
     console.log(e);
-    await dispatch(ShowProfile({ userId }));
+    await dispatch(ShowProfile({ userId: clickedUserId }));
     navigate('/profilia');
   };
 
   const MyProfile = JSON.parse(localStorage.getItem('noob'));
 
-  console.log(MyProfile);
   useEffect(() => {
-    mine(), yours();
-  }, [token]);
+    const fetchData = async () => {
+      await mine();
+      await yours();
+      await Iliana();
+    };
+
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    console.log('mylove value:', mylove);
+    if (mylove && Array.isArray(mylove) && mylove.length > 0) {
+      console.log('Setting wallbooks to:', mylove);
+      setWallbooks(mylove);
+      setWallbooksLoading(false);
+    } else {
+      setWallbooksLoading(false);
+    }
+  }, [mylove]);
 
   if (loading) {
     return <LoadingPage />;
@@ -211,13 +247,13 @@ export default function GenZProfileImproved() {
         <div className="flex flex-col lg:flex-col gap-6">
           {/* Left Column - Main Profile */}
           <div className="w-full rounded-xl flex justify-between">
-            <div className="bg-gradient-to-br from-gray-900 via-black to-gray-800 -solid rounded-lg -[#222222] flex flex-col md:flex-row md:space-x-8 p-4 md:p-6 mb-4 w-full">
+            <div className="bg-gradient-to-br from-gray-900 via-black to-gray-800 rounded-lg flex flex-col md:flex-row md:space-x-8 p-4 md:p-6 mb-4 w-full">
               {/* Avatar & Basic Info */}
               <div className="relative mb-6 flex-shrink-0 mx-auto md:mx-0">
                 <img
                   src={MyProfile?.profilePic}
                   alt="profile pic"
-                  className="w-48 h-48 md:w-64 md:h-64 rounded-2xl object-cover -black shadow-lg"
+                  className="w-48 h-48 md:w-64 md:h-64 rounded-2xl object-cover shadow-lg"
                 />
                 <button
                   onClick={edit}
@@ -229,61 +265,37 @@ export default function GenZProfileImproved() {
 
               <div className="flex flex-col space-y-3 flex-1">
                 <div className="flex items-center gap-2 mb-2 justify-center md:justify-start">
-                  <h1 className="text-xl  font-serif md:text-2xl text-fuchsia-400 font-bold">
+                  <h1 className="text-xl font-serif md:text-2xl text-fuchsia-400 font-bold">
                     {MyProfile?.displayName}
                   </h1>
                 </div>
-                <p className="text-[#888888] text-sm font-mono  md:text-left">
+                <p className="text-[#888888] text-sm font-mono md:text-left">
                   @{MyProfile?.userId.username}
                 </p>
 
                 {/* Bio */}
-                <p className="text-base md:text-lg text-bold text-green leading-relaxed  md:text-left">
+                <p className="text-base md:text-lg text-bold text-green leading-relaxed md:text-left">
                   {MyProfile?.bio}
                 </p>
 
                 {/* Status */}
-                <div className="p-3 bg-[#0a0a0a] -l-4 -[#8b5cf6]">
+                <div className="p-3 bg-[#0a0a0a]">
                   <p className="text-sm text-[#cccccc]">{mockProfile.status}</p>
                 </div>
 
-                {/* Location & Join Date */}
-                <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-6 text-sm text-[#888888] pb-6 -b -[#222222]">
-                  <div className="flex items-center gap-3">
-                    <MapPin className="w-4 h-4" />
-                    {mockProfile.location}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Calendar className="w-4 h-4" />
-                    Joined {mockProfile.joinedDate}
-                  </div>
-                </div>
-
-                <div className="flex flex-col space-y-4">
+                <div className="flex flex-col space-y-4 mt-6">
                   <button
                     onClick={handleConnect}
-                    className="w-full rounded-3xl py-3 bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6] hover:from-[#2563eb] hover:to-[#7c3aed] text-white font-semibold transition"
+                    className="w-full rounded-3xl py-3 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-semibold transition shadow-lg shadow-green-500/30"
                   >
                     Connect
                   </button>
-                  <div className="flex gap-2 rounded-lg">
-                    <button
-                      onClick={handleMessage}
-                      className="flex-1 py-2  rounded-2xl -[#3b82f6] text-[#3b82f6] hover:bg-[#3b82f6] hover:text-white font-medium transition text-sm md:text-base"
-                    >
-                      Message
-                    </button>
-                    <button
-                      onClick={handleFollow}
-                      className={`flex-1 rounded-2xl py-2  font-medium transition text-sm md:text-base ${
-                        isFollowing
-                          ? '-[#888888] text-[#888888] hover:-red-500 hover:text-red-500'
-                          : '-[#3b82f6] text-[#3b82f6] hover:bg-[#3b82f6] hover:text-white'
-                      }`}
-                    >
-                      {isFollowing ? 'Following' : 'Follow'}
-                    </button>
-                  </div>
+                  <button
+                    onClick={handleMessage}
+                    className="w-full py-3 rounded-2xl border border-[#3b82f6] text-[#3b82f6] hover:bg-[#3b82f6] hover:text-white font-medium transition text-sm md:text-base"
+                  >
+                    Message
+                  </button>
                 </div>
               </div>
             </div>
@@ -292,22 +304,22 @@ export default function GenZProfileImproved() {
           {/* Right Column - Content */}
           <div className="w-full">
             {/* Navigation Tabs */}
-            <div className="bg-[#111111] rounded-lg -[#222222] mb-6">
+            <div className="bg-[#111111] rounded-lg mb-6">
               <div className="flex">
                 {['about', 'friends'].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`px-8 py-4 text-sm font-semibold capitalize -b-2 transition flex-1 ${
+                    className={`px-8 py-4 text-sm font-semibold capitalize border-b-2 transition flex-1 ${
                       activeTab === tab
-                        ? '-[#3b82f6] text-[#3b82f6]'
-                        : '-transparent text-[#888888] hover:text-white'
+                        ? 'border-[#3b82f6] text-[#3b82f6]'
+                        : 'border-transparent text-[#888888] hover:text-white'
                     }`}
                   >
                     {tab === 'friends' ? (
-                      <span className="flex items-center gap-2">
+                      <span className="flex items-center gap-2 justify-center">
                         <Users className="w-4 h-4" />
-                        Friends ({list.length})
+                        Friends ({list?.length || 0})
                       </span>
                     ) : (
                       tab
@@ -318,7 +330,6 @@ export default function GenZProfileImproved() {
             </div>
 
             {/* Tab Content */}
-            {/* Tab Content */}
             {activeTab === 'about' && (
               <div className="space-y-4">
                 <div className="mb-6">
@@ -327,7 +338,7 @@ export default function GenZProfileImproved() {
                       <BookOpen className="w-5 h-5 text-[#1db954]" />
                       <h3 className="text-lg font-semibold">Wallbooks</h3>
                       <span className="text-sm text-[#888888]">
-                        ({mockProfile.wallbooks.length})
+                        ({wallbooks?.length || 0})
                       </span>
                     </div>
 
@@ -361,56 +372,70 @@ export default function GenZProfileImproved() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {mockProfile.wallbooks.map((wallbook, index) => (
-                      <div
-                        key={index}
-                        className="p-4 rounded-lg border-l-4 hover:shadow-lg transition-all duration-300 cursor-pointer group"
-                        style={{
-                          background: `linear-gradient(to bottom right, ${wallbookColor}1A, ${wallbookColor}0D)`,
-                          borderLeftColor: wallbookColor,
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = `linear-gradient(to bottom right, ${wallbookColor}26, ${wallbookColor}14)`;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = `linear-gradient(to bottom right, ${wallbookColor}1A, ${wallbookColor}0D)`;
-                        }}
-                      >
-                        <div className="flex flex-col h-full">
-                          <div
-                            className="text-2xl mb-3 opacity-50 group-hover:opacity-70 transition-opacity"
-                            style={{ color: wallbookColor }}
-                          >
-                            "
-                          </div>
-                          <p className="text-sm leading-relaxed mb-3 flex-grow">
-                            {wallbook.quote}
-                          </p>
-                          <div className="flex items-center justify-between mt-auto pt-3 border-t border-[#888888]/20">
-                            <span
-                              className="text-xs font-medium"
+                    {wallbooksLoading ? (
+                      <div className="col-span-2 text-center py-8 text-[#888888]">
+                        Loading thoughts...
+                      </div>
+                    ) : wallbooks && wallbooks.length > 0 ? (
+                      wallbooks.map((wallbook, index) => (
+                        <div
+                          key={wallbook._id || index}
+                          className="p-4 rounded-lg border-l-4 hover:shadow-lg transition-all duration-300 cursor-pointer group"
+                          style={{
+                            background: `linear-gradient(to bottom right, ${wallbookColor}1A, ${wallbookColor}0D)`,
+                            borderLeftColor: wallbookColor,
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = `linear-gradient(to bottom right, ${wallbookColor}26, ${wallbookColor}14)`;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = `linear-gradient(to bottom right, ${wallbookColor}1A, ${wallbookColor}0D)`;
+                          }}
+                        >
+                          <div className="flex flex-col h-full">
+                            <div
+                              className="text-2xl mb-3 opacity-50 group-hover:opacity-70 transition-opacity"
                               style={{ color: wallbookColor }}
                             >
-                              {wallbook.author}
-                            </span>
-                            <span className="text-xs text-[#888888]">
-                              {wallbook.date}
-                            </span>
+                              "
+                            </div>
+                            <p className="text-sm leading-relaxed mb-3 flex-grow">
+                              {wallbook.content}
+                            </p>
+                            <div className="flex items-center justify-between mt-auto pt-3 border-t border-[#888888]/20">
+                              <span
+                                className="text-xs font-medium"
+                                style={{ color: wallbookColor }}
+                              >
+                                {wallbook.username || 'Anonymous'}
+                              </span>
+                              <span className="text-xs text-[#888888]">
+                                {wallbook.createdAt
+                                  ? new Date(
+                                      wallbook.createdAt
+                                    ).toLocaleDateString()
+                                  : ''}
+                              </span>
+                            </div>
                           </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="col-span-2 text-center py-8 text-[#888888]">
+                        No thoughts yet. Start sharing your thoughts!
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               </div>
             )}
 
-            {activeTab === 'friends' && state == true && (
+            {activeTab === 'friends' && state === true && (
               <div className="bg-[#111111] rounded-md p-4">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold flex items-center gap-2">
                     <Users className="w-5 h-5" />
-                    Friends ({list.length})
+                    Friends ({list?.length || 0})
                   </h3>
                   <button
                     onClick={() => setShowAllFriends(!showAllFriends)}
@@ -420,35 +445,44 @@ export default function GenZProfileImproved() {
                   </button>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {list.map((friend) => (
-                    <div key={friend.userId}>
-                      <div className="flex flex-col items-center gap-3 group cursor-pointer">
-                        <div
-                          className="relative"
-                          onClick={() => handlecclick(friend.userId)}
-                        >
-                          <img
-                            src={friend?.profilePic}
-                            alt={friend?.displayName}
-                            className="w-32 h-32 rounded-xl object-cover border-2 border-[#333333] group-hover:border-blue-500 group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-blue-500/20 transition-all duration-300"
-                          />
+                  {list && list.length > 0 ? (
+                    list.map((friend) => (
+                      <div key={friend.userId}>
+                        <div className="flex flex-col items-center gap-3 group cursor-pointer">
                           <div
-                            className={`absolute -bottom-1 -right-1 w-4 h-4 ${getStatusColor()} border-2 border-[#0a0a0a] rounded-full transition-transform group-hover:scale-110`}
-                          />
-                        </div>
+                            className="relative"
+                            onClick={() => handlecclick(friend.userId)}
+                          >
+                            <img
+                              src={friend?.profilePic}
+                              alt={friend?.displayName}
+                              className="w-32 h-32 rounded-xl object-cover border-2 border-[#333333] group-hover:border-blue-500 group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-blue-500/20 transition-all duration-300"
+                            />
+                            <div
+                              className={`absolute -bottom-1 -right-1 w-4 h-4 ${getStatusColor(
+                                'online'
+                              )} border-2 border-[#0a0a0a] rounded-full transition-transform group-hover:scale-110`}
+                            />
+                          </div>
 
-                        <div className="text-center">
-                          <div className="text-sm font-semibold text-white group-hover:text-blue-400 transition-colors duration-300">
-                            {friend?.displayName}
+                          <div className="text-center">
+                            <div className="text-sm font-semibold text-white group-hover:text-blue-400 transition-colors duration-300">
+                              {friend?.displayName}
+                            </div>
                           </div>
                         </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="col-span-4 text-center py-8 text-[#888888]">
+                      No friends yet
                     </div>
-                  ))}
-                  {state == false && <LoadingPage />}
+                  )}
                 </div>
               </div>
             )}
+
+            {activeTab === 'friends' && state === false && <LoadingPage />}
           </div>
         </div>
       </div>
@@ -457,7 +491,7 @@ export default function GenZProfileImproved() {
           <div className="mb-2 text-center">
             <p className="text-md mb-2">
               Designed and Managed by
-              <span className="text-md font-bold text-fuchsia-500 ml-2 ">
+              <span className="text-md font-bold text-fuchsia-500 ml-2">
                 PRIYAM PATHAK
               </span>
             </p>
