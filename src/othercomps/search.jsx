@@ -132,7 +132,7 @@ const UserSearchResults = () => {
           <h2 className="text-2xl md:text-3xl font-bold mb-3 text-white">Explore People</h2>
           <p className="text-gray-400 text-sm md:text-base mb-2">
             Search for people on SocialNet by their{' '}
-            <span className="text-white font-medium">name or username</span>
+            <span className="text-white font-medium">Display Name</span>
           </p>
           <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm text-gray-500">
             <span>Search for:</span>
