@@ -149,8 +149,8 @@ export default function GenZProfileImproved() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white py-6">
       {/* Header */}
       <div className="flex items-center justify-center h-16 mb-6">
-        <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-100 via-gray-300 to-gray-600 bg-clip-text text-transparent drop-shadow-2xl relative">
-          Welcome To SocialNet
+        <h2 className="text-2xl md:text-2xl font-bold bg-gradient-to-r from-gray-100 via-gray-300 to-gray-600 bg-clip-text text-transparent drop-shadow-2xl relative">
+          Welcome To WallBooks
           <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-blue-500/20 blur-2xl animate-pulse -z-10"></div>
         </h2>
       </div>
