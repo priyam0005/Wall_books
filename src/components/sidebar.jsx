@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Home,
   MessageCircle,
@@ -7,47 +7,62 @@ import {
   ChevronRight,
   ChevronLeft,
   Settings,
-  Bookmark,
-  PlusCircle,
   User,
   PowerIcon,
   BellIcon,
-  Menu,
-  X,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { userProfile } from '../store/userProfile/MyProfile';
-import Bellicon from '../othercomps/bellicon';
 import { Reqlist } from '../store/NotiFicationStore/ReqList';
 
 const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
   const [isMobile, setIsMobile] = useState(false);
+  
   const token = localStorage.getItem('auth');
-
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  //getting data from the redux store for profilePic and other data
-
-  const mine = async () => {
-    const resultAction = await dispatch(userProfile({ token }));
-    if (userProfile.fulfilled.match(resultAction)) {
-      console.log('the request is succesfull');
-    } else if (userProfile.pending.match(resultAction)) {
-      console.log('the request was aborted ');
+  // Memoized selectors
+  const { list = [] } = useSelector((state) => state.ReqList || { list: [] });
+  const profile = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('noob'));
+    } catch {
+      return null;
     }
-  };
+  }, []);
 
+  // Memoized menu items
+  const menuItems = useMemo(() => [
+    { id: 'home', icon: Home, label: 'Home' },
+    { id: 'messages', icon: MessageCircle, label: 'Messages' },
+    { id: 'explore', icon: Compass, label: 'Explore' },
+    { id: 'notification', icon: BellIcon, label: 'Notification' },
+    { id: 'profile', icon: User, label: 'Profile' },
+  ], []);
+
+  // Fetch user profile and notifications only once
   useEffect(() => {
-    mine();
-  }, [token, dispatch]);
+    if (!token) return;
 
-  const profile = JSON.parse(localStorage.getItem('noob'));
+    const fetchData = async () => {
+      try {
+        await Promise.all([
+          dispatch(userProfile({ token })),
+          dispatch(Reqlist({ token }))
+        ]);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
 
-  // Check screen size
+    fetchData();
+  }, []); // Empty dependency array - fetch only once
+
+  // Screen size check with cleanup
   useEffect(() => {
     const checkScreenSize = () => {
       const mobile = window.innerWidth < 768;
@@ -62,101 +77,58 @@ const Sidebar = () => {
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
-  const menuItems = [
-    { id: 'home', icon: Home, label: 'Home' },
-    { id: 'messages', icon: MessageCircle, label: 'Messages' },
-    { id: 'explore', icon: Compass, label: 'Explore' },
-    { id: 'notification', icon: BellIcon, label: 'Notification' },
-    { id: 'profile', icon: User, label: 'Profile' },
-  ];
+  // Memoized navigation handlers
+  const handleNavigation = useCallback((itemId) => {
+    setActiveTab(itemId);
 
-  const toggleSidebar = () => {
-    setIsCollapsed(!isCollapsed);
-  };
-
-  const toggleMobileMenu = () => {
-    // Removed - no longer needed
-  };
-
-  const tabs = (tabId) => {
-    setActiveTab(tabId);
-  };
-
-  // Your navigation functions - replace these with your actual logic
-  const just = () => {
-    navigate('/');
-  };
-  const message = () => console.log('Navigate messages');
-  const profiler = () => {
-    if (!token) {
-      alert('Please sign in first to view your profile! 🔐');
-      navigate('/login');
-      return;
+    switch (itemId) {
+      case 'profile':
+        if (!token) {
+          alert('Please sign in first to view your profile! 🔐');
+          navigate('/login');
+          return;
+        }
+        navigate('/profile');
+        break;
+      case 'notification':
+        navigate('/notifications');
+        break;
+      case 'explore':
+        navigate('/search');
+        break;
+      case 'power':
+        navigate('/login');
+        break;
+      case 'messages':
+        navigate('/PersonalChat');
+        break;
+      default:
+        navigate('/');
     }
-    navigate('/profile');
-  };
+  }, [token, navigate]);
 
-  const user = () => {
-    if (!token) {
-      alert('Please sign in first to view your profile! 🔐');
-      navigate('/login');
-      return;
+  const toggleSidebar = useCallback(() => {
+    setIsCollapsed(prev => !prev);
+  }, []);
+
+  // Memoized notification badge
+  const NotificationBadge = useCallback(({ count, isMobile = false }) => {
+    if (count === 0) return null;
+    
+    if (isMobile) {
+      return (
+        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+          {count > 9 ? '9+' : count}
+        </span>
+      );
     }
-    navigate('/profile');
-  };
-
-  const explore = () => {
-    navigate('/search');
-  };
-
-  const notify = () => {
-    navigate('/notifications');
-  };
-
-  const SignIn = () => {
-    navigate('/login');
-  };
-
-  const messages = async () => {
-    navigate('/PersonalChat');
-  };
-
-  const nors = async () => {
-    const resultAction = await dispatch(Reqlist({ token }));
-    if (Reqlist.fulfilled.match(resultAction)) {
-      console.log('we should have our reqList data ');
-    } else if (Reqlist.pending.match(resultAction)) {
-    } else {
-      console.log(error);
-    }
-  };
-
-  useEffect(() => {
-    nors();
-  }, [token, dispatch]);
-
-  const { loading, error, list } = useSelector((state) => state.ReqList);
-
-  console.log(list.length);
-
-  const handleNavigation = (itemId) => {
-    if (itemId === 'create') {
-      // Your create logic
-    } else if (itemId === 'profile') {
-      profiler();
-    } else if (itemId === 'notification') {
-      notify();
-    } else if (itemId === 'explore') {
-      explore();
-    } else if (itemId === 'power') {
-      SignIn();
-    } else if (itemId === 'messages') {
-      messages();
-    } else {
-      just();
-    }
-    tabs(itemId);
-  };
+    
+    return (
+      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1 min-w-[18px] h-[18px] flex items-center justify-center">
+        {count}
+      </span>
+    );
+  }, []);
 
   return (
     <>
@@ -182,6 +154,7 @@ const Sidebar = () => {
                 className={`p-1.5 hover:bg-gray-800/50 rounded-lg transition-colors flex-shrink-0 text-gray-400 hover:text-white ${
                   isCollapsed ? 'mx-auto' : ''
                 }`}
+                aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               >
                 {isCollapsed ? (
                   <ChevronRight className="w-5 h-5" />
@@ -212,18 +185,15 @@ const Sidebar = () => {
                         : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/40'
                     }`}
                     title={isCollapsed ? item.label : ''}
+                    aria-label={item.label}
                   >
                     {item.id === 'notification' ? (
                       <span className="relative">
-                        <Icon className="w-6 h-6 text-gray-400" />
-                        {list.length > 0 && (
-                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1">
-                            {list.length}
-                          </span>
-                        )}
+                        <Icon className="w-6 h-6" />
+                        <NotificationBadge count={list.length} />
                       </span>
                     ) : (
-                      <Icon className="w-6 h-6 text-gray-400" />
+                      <Icon className="w-6 h-6" />
                     )}
                     {!isCollapsed && (
                       <span className="text-sm font-medium tracking-wide">
@@ -235,7 +205,7 @@ const Sidebar = () => {
               );
             })}
 
-            {/* Logout button - only in sidebar */}
+            {/* Logout button */}
             <li>
               <button
                 onClick={() => handleNavigation('power')}
@@ -243,8 +213,9 @@ const Sidebar = () => {
                   isCollapsed ? 'justify-center' : 'space-x-3'
                 } px-4 py-3 rounded-lg transition-all duration-200 text-gray-400 hover:text-gray-200 hover:bg-gray-800/40`}
                 title={isCollapsed ? 'Log out' : ''}
+                aria-label="Log out"
               >
-                <PowerIcon className="w-6 h-6 text-gray-400" />
+                <PowerIcon className="w-6 h-6" />
                 {!isCollapsed && (
                   <span className="text-sm font-medium tracking-wide">
                     Log out
@@ -255,31 +226,15 @@ const Sidebar = () => {
           </ul>
         </nav>
 
-        {/* Bottom Section */}
+        {/* Bottom Section - Settings Only */}
         <div className="px-4 py-6 border-t border-gray-800/50 mt-auto">
           {!isCollapsed ? (
             <>
-              {/* User Profile - Full */}
-              <div className="group flex items-center space-x-3 p-3 rounded-xl cursor-pointer transition-all duration-300 hover:bg-gray-800/50 mb-3">
-                <div className="relative" onClick={user}>
-                  <img
-                    src={profile?.profilePic}
-                    className="w-11 h-11 rounded-full flex items-center justify-center shadow-lg group-hover:shadow-purple-500/25 transition-all duration-300"
-                  />
-                  <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-green-400 rounded-full border-2 border-black"></div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white group-hover:text-purple-200 transition-colors truncate">
-                    {profile?.displayName}
-                  </p>
-                  <p className="text-xs text-gray-500 group-hover:text-gray-400 transition-colors truncate">
-                    @{profile?.userId?.username}
-                  </p>
-                </div>
-              </div>
-
               {/* Settings */}
-              <button className="group w-full flex items-center space-x-3 px-4 py-2.5 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-all duration-300">
+              <button 
+                className="group w-full flex items-center space-x-3 px-4 py-2.5 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-all duration-300"
+                aria-label="Settings"
+              >
                 <Settings
                   size={18}
                   className="text-gray-500 group-hover:text-white transition-all duration-300"
@@ -297,23 +252,11 @@ const Sidebar = () => {
             </>
           ) : (
             <>
-              {/* User Profile - Collapsed */}
-              <div className="group flex justify-center mb-3">
-                <div className="relative cursor-pointer" onClick={user}>
-                  <img
-                    src={
-                      profile?.profilePic || 'https://i.sstatic.net/l60Hf.png'
-                    }
-                    className="w-11 h-11 rounded-full flex items-center justify-center shadow-lg group-hover:shadow-purple-500/25 transition-all duration-300"
-                  />
-                  <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-green-400 rounded-full border-2 border-black"></div>
-                </div>
-              </div>
-
               {/* Settings - Collapsed */}
               <button
                 className="group w-full flex justify-center px-4 py-2.5 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-all duration-300"
                 title="Settings"
+                aria-label="Settings"
               >
                 <Settings
                   size={18}
@@ -340,13 +283,12 @@ const Sidebar = () => {
                   className={`flex flex-col items-center justify-center px-3 py-2 rounded-lg transition-all duration-200 ${
                     isActive ? 'text-white bg-gray-800/60' : 'text-gray-400'
                   }`}
+                  aria-label={item.label}
                 >
                   <div className="relative">
                     <Icon className="w-6 h-6" />
-                    {item.id === 'notification' && list.length > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
-                        {list.length > 9 ? '9+' : list.length}
-                      </span>
+                    {item.id === 'notification' && (
+                      <NotificationBadge count={list.length} isMobile={true} />
                     )}
                   </div>
                   <span className="text-[10px] mt-1 font-medium">
@@ -362,4 +304,4 @@ const Sidebar = () => {
   );
 };
 
-export default Sidebar;
+export default Sidebar
