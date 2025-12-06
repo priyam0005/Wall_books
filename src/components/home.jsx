@@ -47,7 +47,7 @@ const WebConnections = React.memo(({ wallbooks, containerRef }) => {
   }, [wallbooks, containerRef]);
 
   return (
-    <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 5 }}>
+    <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
       {connections.map((conn) => (
         <motion.line
           key={conn.id}
@@ -77,8 +77,11 @@ const FloatingWallbook = React.memo(({ wallbook, index, onToggleLike, totalCards
     const col = index % cols;
     const row = Math.floor(index / cols);
     
-    // Base position with spacing
-    const baseLeft = (col / cols) * 80 + 5;
+    // Desktop: adjust to leave space on left (start from 15% instead of 5%)
+    const leftMargin = isMobile ? 5 : 15;
+    const availableWidth = isMobile ? 90 : 80;
+    
+    const baseLeft = (col / cols) * availableWidth + leftMargin;
     const baseTop = (row / rows) * 70 + 10;
     
     // Add small random offset to make it look natural but avoid overlap
@@ -86,7 +89,7 @@ const FloatingWallbook = React.memo(({ wallbook, index, onToggleLike, totalCards
     const offsetY = (Math.random() - 0.5) * 8;
     
     return {
-      left: `${Math.max(5, Math.min(85, baseLeft + offsetX))}%`,
+      left: `${Math.max(leftMargin, Math.min(95 - (isMobile ? 10 : 5), baseLeft + offsetX))}%`,
       top: `${Math.max(10, Math.min(80, baseTop + offsetY))}%`
     };
   };
