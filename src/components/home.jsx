@@ -401,7 +401,7 @@ const HomePage = () => {
         animate={{ scale: 1 }}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
-        className="fixed bottom-24 right-4 md:bottom-8 md:right-8 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-full p-3 md:p-4 shadow-2xl z-40"
+        className="fixed bottom-24 right-4 md:bottom-8 md:right-8 bg-gradient-to-r from-slate-800 to-black hover:from-slate-700 hover:to-black text-white rounded-full p-3 md:p-4 shadow-2xl z-40"
       >
         <Plus className="w-6 h-6 md:w-8 md:h-8" />
       </motion.button>
