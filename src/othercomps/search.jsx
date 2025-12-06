@@ -94,7 +94,7 @@ const UserSearchResults = () => {
         <div className="max-w-7xl mx-auto px-4 py-4 md:py-5">
           <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-6">
             <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-gray-100 via-gray-300 to-gray-600 bg-clip-text text-transparent">
-              SocialNet
+              WallBooks
             </h1>
 
             {/* Search Form */}
