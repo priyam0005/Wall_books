@@ -379,41 +379,38 @@ export default function GenZProfileImproved() {
     setShowDeleteModal(true);
   }, []);
 
-  const handleEditSubmit = useCallback(
-    async (updatedText) => {
-      console.log('Updating wallbook:', selectedWallbook._id);
-      const token = localStorage.getItem('auth');
-      if (!token) {
-        alert('Please login to edit');
-        return;
-      }
+  const handleEditSubmit = useCallback(async () => {
+    console.log('Updating wallbook:', selectedWallbook._id);
+    const token = localStorage.getItem('auth');
+    if (!token) {
+      alert('Please login to edit');
+      return;
+    }
 
-      try {
-        // Dispatch the updateThought action with correct parameters
-        const resultAction = await dispatch(
-          updateThought({
-            thoughtId: selectedWallbook?._id,
-            thoughtData: { content: updatedText },
-            token,
-          })
-        );
+    try {
+      // Dispatch the updateThought action with correct parameters
+      const resultAction = await dispatch(
+        updateThought({
+          thoughtId: selectedWallbook?._id,
+          thoughtData: selectedWallbook.content,
+          token,
+        })
+      );
 
-        if (updateThought.fulfilled.match(resultAction)) {
-          console.log('Wallbook updated successfully');
-          // Refresh the thoughts
-          await Iliana();
-          setShowEditModal(false);
-          setSelectedWallbook(null);
-        } else if (updateThought.rejected.match(resultAction)) {
-          alert('Failed to update wallbook. Please try again.');
-        }
-      } catch (error) {
-        console.error('Error updating wallbook:', error);
-        alert('An error occurred while updating.');
+      if (updateThought.fulfilled.match(resultAction)) {
+        console.log('Wallbook updated successfully');
+        // Refresh the thoughts
+        await Iliana();
+        setShowEditModal(false);
+        setSelectedWallbook(null);
+      } else if (updateThought.rejected.match(resultAction)) {
+        alert('Failed to update wallbook. Please try again.');
       }
-    },
-    [dispatch]
-  );
+    } catch (error) {
+      console.error('Error updating wallbook:', error);
+      alert('An error occurred while updating.');
+    }
+  }, [dispatch]);
 
   const handleDeleteConfirm = useCallback(async () => {
     const token = localStorage.getItem('auth');
