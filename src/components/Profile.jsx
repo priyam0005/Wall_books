@@ -392,7 +392,7 @@ export default function GenZProfileImproved() {
         // Dispatch the updateThought action with correct parameters
         const resultAction = await dispatch(
           updateThought({
-            thoughtId: selectedWallbook._id,
+            thoughtId: wallbookId,
             thoughtData: updatedText,
             token,
           })
