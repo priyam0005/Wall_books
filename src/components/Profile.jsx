@@ -380,8 +380,8 @@ export default function GenZProfileImproved() {
   }, []);
 
   const handleEditSubmit = useCallback(
-    async (wallbookId, updatedText) => {
-      console.log('Updating wallbook:', wallbookId);
+    async (updatedText) => {
+      console.log('Updating wallbook:', selectedWallbook._id);
       const token = localStorage.getItem('auth');
       if (!token) {
         alert('Please login to edit');
@@ -392,7 +392,7 @@ export default function GenZProfileImproved() {
         // Dispatch the updateThought action with correct parameters
         const resultAction = await dispatch(
           updateThought({
-            thoughtId: wallbookId._id,
+            thoughtId: selectedWallbook?._id,
             thoughtData: updatedText,
             token,
           })
@@ -610,7 +610,7 @@ export default function GenZProfileImproved() {
                   wallbooks.map((wallbook, index) => (
                     <WallbookCard
                       key={wallbook._id || index}
-                      wallbook={wallbook}
+                      wallbook={selectedWallbook}
                       index={index}
                       wallbookColor={wallbookColor}
                       onEdit={handleEditClick}
