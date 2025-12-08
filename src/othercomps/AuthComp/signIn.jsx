@@ -35,14 +35,11 @@ export default function AuthForms() {
 
   const onSubmit = async (data) => {
     try {
-      await axios.post(
-        'https://r01ck4rh-405.inc1.devtunnels.ms/auth/register',
-        {
-          email: data.email,
-          username: data.username,
-          password: data.password,
-        }
-      );
+      await axios.post('https://sc-net.onrender.com/auth/register', {
+        email: data.email,
+        username: data.username,
+        password: data.password,
+      });
       navigate('/login');
       reset();
     } catch (err) {
