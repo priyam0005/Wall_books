@@ -610,7 +610,7 @@ export default function GenZProfileImproved() {
                   wallbooks.map((wallbook, index) => (
                     <WallbookCard
                       key={wallbook._id || index}
-                      wallbook={selectedWallbook}
+                      wallbook={wallbook}
                       index={index}
                       wallbookColor={wallbookColor}
                       onEdit={handleEditClick}
