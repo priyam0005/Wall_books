@@ -13,6 +13,8 @@ import dost from './Friends/newFriend';
 import feed from './thoughts/getThought';
 import create from './thoughts/createThought';
 import myThought from './thoughts/mythought';
+import delThought from '../store/thoughts/deleteThought';
+import upddateThought from '../store/thoughts/updateThought';
 
 const rootReducer = combineReducers({
   just: login,
@@ -26,6 +28,8 @@ const rootReducer = combineReducers({
   Iliana: feed,
   Mi: myThought,
   Amore: create,
+  Aurelius: delThought,
+  Plato: upddateThought,
 });
 
 export default rootReducer;

@@ -6,6 +6,7 @@ import { ShowProfile } from '../store/userProfile/getProfile';
 import { userProfile } from '../store/userProfile/MyProfile';
 import LoadingPage from '../othercomps/loadingComp/loading';
 import { friends } from '../store/Friends/friends';
+import { deleteThought } from '../store/thoughts/deleteThought';
 import {
   BookOpen,
   Users,
@@ -295,6 +296,7 @@ export default function GenZProfileImproved() {
   const userId = Na._id;
 
   const mylove = useSelector((state) => state.Mi?.thoughts || []);
+  console.log(mylove);
 
   const Iliana = async () => {
     setWallbooksLoading(true);
@@ -408,41 +410,46 @@ export default function GenZProfileImproved() {
     }
   }, []);
 
-  const handleDeleteConfirm = useCallback(async () => {
-    const token = localStorage.getItem('auth');
-    if (!token || !selectedWallbook) {
-      alert('Please login to delete');
-      return;
-    }
+  const handleDeleteConfirm = useCallback(
+    async (e) => {
+      const token = localStorage.getItem('auth');
+      console.log(e._id);
 
-    setIsDeleting(true);
-    try {
-      // Replace YOUR_API_ENDPOINT with your actual backend API URL
-      const response = await fetch(
-        `YOUR_API_ENDPOINT/thoughts/${selectedWallbook._id}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.ok) {
-        // Refresh the thoughts
-        await Iliana();
-        setShowDeleteModal(false);
-        setSelectedWallbook(null);
-      } else {
-        alert('Failed to delete wallbook. Please try again.');
+      if (!token || !selectedWallbook) {
+        alert('Please login to delete');
+        return;
       }
-    } catch (error) {
-      console.error('Error deleting wallbook:', error);
-      alert('An error occurred while deleting.');
-    } finally {
-      setIsDeleting(false);
-    }
-  }, [selectedWallbook]);
+
+      setIsDeleting(true);
+      try {
+        // Replace YOUR_API_ENDPOINT with your actual backend API URL
+        const response = await fetch(
+          `YOUR_API_ENDPOINT/thoughts/${selectedWallbook._id}`,
+          {
+            method: 'DELETE',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (response.ok) {
+          // Refresh the thoughts
+          await Iliana();
+          setShowDeleteModal(false);
+          setSelectedWallbook(null);
+        } else {
+          alert('Failed to delete wallbook. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error deleting wallbook:', error);
+        alert('An error occurred while deleting.');
+      } finally {
+        setIsDeleting(false);
+      }
+    },
+    [selectedWallbook]
+  );
 
   const MyProfile = JSON.parse(localStorage.getItem('noob'));
 
