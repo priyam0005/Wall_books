@@ -7,6 +7,7 @@ import { userProfile } from '../store/userProfile/MyProfile';
 import LoadingPage from '../othercomps/loadingComp/loading';
 import { friends } from '../store/Friends/friends';
 import { deleteThought } from '../store/thoughts/deleteThought';
+import { updateThought } from '../store/thoughts/updateThought';
 import {
   BookOpen,
   Users,
@@ -378,78 +379,76 @@ export default function GenZProfileImproved() {
     setShowDeleteModal(true);
   }, []);
 
-  const handleEditSubmit = useCallback(async (wallbookId, updatedText) => {
-    const token = localStorage.getItem('auth');
-    if (!token) {
-      alert('Please login to edit');
-      return;
-    }
-
-    try {
-      // Replace YOUR_API_ENDPOINT with your actual backend API URL
-      const response = await fetch(`YOUR_API_ENDPOINT/thoughts/${wallbookId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ content: updatedText }),
-      });
-
-      if (response.ok) {
-        // Refresh the thoughts
-        await Iliana();
-        setShowEditModal(false);
-        setSelectedWallbook(null);
-      } else {
-        alert('Failed to update wallbook. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error updating wallbook:', error);
-      alert('An error occurred while updating.');
-    }
-  }, []);
-
-  const handleDeleteConfirm = useCallback(
-    async (e) => {
+  const handleEditSubmit = useCallback(
+    async (wallbookId, updatedText) => {
+      console.log('Updating wallbook:', wallbookId);
       const token = localStorage.getItem('auth');
-      console.log(e._id);
-
-      if (!token || !selectedWallbook) {
-        alert('Please login to delete');
+      if (!token) {
+        alert('Please login to edit');
         return;
       }
 
-      setIsDeleting(true);
       try {
-        // Replace YOUR_API_ENDPOINT with your actual backend API URL
-        const response = await fetch(
-          `YOUR_API_ENDPOINT/thoughts/${selectedWallbook._id}`,
-          {
-            method: 'DELETE',
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+        // Dispatch the updateThought action with correct parameters
+        const resultAction = await dispatch(
+          updateThought({
+            token,
+            thoughtId: wallbookId,
+            thoughtData: updatedText,
+          })
         );
 
-        if (response.ok) {
+        if (updateThought.fulfilled.match(resultAction)) {
+          console.log('Wallbook updated successfully');
           // Refresh the thoughts
           await Iliana();
-          setShowDeleteModal(false);
+          setShowEditModal(false);
           setSelectedWallbook(null);
-        } else {
-          alert('Failed to delete wallbook. Please try again.');
+        } else if (updateThought.rejected.match(resultAction)) {
+          alert('Failed to update wallbook. Please try again.');
         }
       } catch (error) {
-        console.error('Error deleting wallbook:', error);
-        alert('An error occurred while deleting.');
-      } finally {
-        setIsDeleting(false);
+        console.error('Error updating wallbook:', error);
+        alert('An error occurred while updating.');
       }
     },
-    [selectedWallbook]
+    [dispatch]
   );
+
+  const handleDeleteConfirm = useCallback(async () => {
+    const token = localStorage.getItem('auth');
+
+    if (!token || !selectedWallbook) {
+      alert('Please login to delete');
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      // Dispatch the deleteThought action with correct parameters
+      const resultAction = await dispatch(
+        deleteThought({
+          token,
+          thoughtId: selectedWallbook._id,
+        })
+      );
+
+      if (deleteThought.fulfilled.match(resultAction)) {
+        console.log('Wallbook deleted successfully');
+        // Refresh the thoughts
+        await Iliana();
+        setShowDeleteModal(false);
+        setSelectedWallbook(null);
+      } else if (deleteThought.rejected.match(resultAction)) {
+        alert('Failed to delete wallbook. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error deleting wallbook:', error);
+      alert('An error occurred while deleting.');
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [dispatch, selectedWallbook]);
 
   const MyProfile = JSON.parse(localStorage.getItem('noob'));
 
