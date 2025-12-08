@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
@@ -6,12 +6,260 @@ import { ShowProfile } from '../store/userProfile/getProfile';
 import { userProfile } from '../store/userProfile/MyProfile';
 import LoadingPage from '../othercomps/loadingComp/loading';
 import { friends } from '../store/Friends/friends';
-import { BookOpen, Users, Edit3 } from 'lucide-react';
+import {
+  BookOpen,
+  Users,
+  Edit3,
+  MoreVertical,
+  Edit2,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { getUserThoughts } from '../store/thoughts/mythought';
+import { motion, AnimatePresence } from 'framer-motion';
+
+// Edit Wallbook Form
+const EditWallbookForm = React.memo(({ wallbook, onSubmit, onCancel }) => {
+  const [formData, setFormData] = useState({ text: wallbook.content });
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const validate = useCallback(() => {
+    const newErrors = {};
+    if (!formData.text.trim()) {
+      newErrors.text = 'Wallbook text is required';
+    } else if (formData.text.length < 10) {
+      newErrors.text = 'Please enter at least 10 characters';
+    } else if (formData.text.length > 250) {
+      newErrors.text = 'Maximum 250 characters allowed';
+    }
+    return newErrors;
+  }, [formData.text]);
+
+  const handleSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+      const validationErrors = validate();
+      if (Object.keys(validationErrors).length > 0) {
+        setErrors(validationErrors);
+        return;
+      }
+      setIsSubmitting(true);
+      await onSubmit(wallbook._id, formData.text);
+      setIsSubmitting(false);
+    },
+    [formData, onSubmit, validate, wallbook._id]
+  );
+
+  return (
+    <div className="max-w-lg w-full p-6 md:p-8 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-2xl shadow-xl ring-1 ring-purple-700/40 backdrop-blur-md">
+      <h2 className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-500 mb-4 md:mb-6">
+        Edit Wallbook
+      </h2>
+      <div className="mb-6 md:mb-8">
+        <label
+          htmlFor="edit-text"
+          className="block text-gray-300 text-base md:text-lg font-semibold mb-2"
+        >
+          Your Wallbook
+        </label>
+        <textarea
+          id="edit-text"
+          rows={5}
+          value={formData.text}
+          onChange={(e) => setFormData({ text: e.target.value })}
+          placeholder="Share your thoughts here..."
+          className={`w-full px-4 py-3 rounded-xl bg-gray-800 text-white placeholder-gray-500 resize-none focus:outline-none focus:ring-4 focus:ring-blue-500/60 transition-shadow duration-300 ${
+            errors.text ? 'ring-2 ring-red-500' : 'ring-1 ring-gray-700'
+          }`}
+        />
+        {errors.text && (
+          <p className="mt-1 text-sm text-red-500 font-semibold">
+            {errors.text}
+          </p>
+        )}
+      </div>
+      <div className="flex gap-3">
+        <button
+          onClick={onCancel}
+          className="flex-1 py-3 md:py-4 bg-gray-700 hover:bg-gray-600 rounded-xl text-white text-lg md:text-xl font-bold shadow-lg transition-transform duration-300 hover:scale-105"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          className="flex-1 py-3 md:py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-xl text-white text-lg md:text-xl font-bold shadow-lg transition-transform duration-300 hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {isSubmitting ? 'Updating...' : 'Update'}
+        </button>
+      </div>
+    </div>
+  );
+});
+
+EditWallbookForm.displayName = 'EditWallbookForm';
+
+// Delete Confirmation Modal
+const DeleteConfirmationModal = React.memo(
+  ({ wallbook, onConfirm, onCancel, isDeleting }) => {
+    return (
+      <div className="max-w-md w-full p-6 md:p-8 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-2xl shadow-xl ring-1 ring-red-700/40 backdrop-blur-md">
+        <h2 className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-500 mb-4">
+          Delete Wallbook?
+        </h2>
+        <p className="text-gray-300 mb-6">
+          Are you sure you want to delete this wallbook? This action cannot be
+          undone.
+        </p>
+        <div className="bg-gray-800/50 rounded-lg p-4 mb-6">
+          <p className="text-gray-100 text-sm italic line-clamp-3">
+            "{wallbook.content}"
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            disabled={isDeleting}
+            className="flex-1 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl text-white text-lg font-bold shadow-lg transition-transform duration-300 hover:scale-105 disabled:opacity-60"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isDeleting}
+            className="flex-1 py-3 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 rounded-xl text-white text-lg font-bold shadow-lg transition-transform duration-300 hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+);
+
+DeleteConfirmationModal.displayName = 'DeleteConfirmationModal';
+
+// Wallbook Card Component with Three-Dot Menu
+const WallbookCard = React.memo(
+  ({ wallbook, index, wallbookColor, onEdit, onDelete }) => {
+    const [showMenu, setShowMenu] = useState(false);
+    const menuRef = useRef(null);
+
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (menuRef.current && !menuRef.current.contains(event.target)) {
+          setShowMenu(false);
+        }
+      };
+      if (showMenu) {
+        document.addEventListener('mousedown', handleClickOutside);
+        return () =>
+          document.removeEventListener('mousedown', handleClickOutside);
+      }
+    }, [showMenu]);
+
+    return (
+      <div
+        key={wallbook._id || index}
+        className="p-4 rounded-lg border-l-4 hover:shadow-lg transition-all duration-300 cursor-pointer group relative"
+        style={{
+          background: `linear-gradient(to bottom right, ${wallbookColor}1A, ${wallbookColor}0D)`,
+          borderLeftColor: wallbookColor,
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = `linear-gradient(to bottom right, ${wallbookColor}26, ${wallbookColor}14)`;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = `linear-gradient(to bottom right, ${wallbookColor}1A, ${wallbookColor}0D)`;
+        }}
+      >
+        {/* Three dot menu button */}
+        <div className="absolute top-2 right-2" ref={menuRef}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMenu(!showMenu);
+            }}
+            className="p-1.5 rounded-lg hover:bg-gray-700/50 transition-colors opacity-0 group-hover:opacity-100"
+          >
+            <MoreVertical className="w-4 h-4 text-gray-400" />
+          </button>
+
+          <AnimatePresence>
+            {showMenu && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                transition={{ duration: 0.15 }}
+                className="absolute right-0 mt-1 w-40 bg-gray-800/95 backdrop-blur-md border border-gray-700/50 rounded-lg shadow-xl overflow-hidden z-50"
+              >
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMenu(false);
+                    onEdit(wallbook);
+                  }}
+                  className="w-full px-4 py-2.5 text-left text-sm text-gray-300 hover:bg-gray-700/50 transition-colors flex items-center gap-2"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Edit
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMenu(false);
+                    onDelete(wallbook);
+                  }}
+                  className="w-full px-4 py-2.5 text-left text-sm text-red-400 hover:bg-gray-700/50 transition-colors flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <div className="flex flex-col h-full">
+          <div
+            className="text-2xl mb-2 opacity-50 group-hover:opacity-70 transition-opacity"
+            style={{ color: wallbookColor }}
+          >
+            "
+          </div>
+          <p className="text-sm leading-relaxed mb-3 flex-grow text-gray-200 pr-6">
+            {wallbook.content}
+          </p>
+          <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-700/30">
+            <span
+              className="text-xs font-medium"
+              style={{ color: wallbookColor }}
+            >
+              {wallbook.username || 'Anonymous'}
+            </span>
+            <span className="text-xs text-gray-400">
+              {wallbook.createdAt
+                ? new Date(wallbook.createdAt).toLocaleDateString()
+                : ''}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+);
+
+WallbookCard.displayName = 'WallbookCard';
 
 export default function GenZProfileImproved() {
   const [activeTab, setActiveTab] = useState('about');
   const [showAllFriends, setShowAllFriends] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedWallbook, setSelectedWallbook] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const dispatch = useDispatch();
 
   const color = localStorage.getItem('color');
@@ -118,6 +366,84 @@ export default function GenZProfileImproved() {
     navigate('/profilia');
   };
 
+  const handleEditClick = useCallback((wallbook) => {
+    setSelectedWallbook(wallbook);
+    setShowEditModal(true);
+  }, []);
+
+  const handleDeleteClick = useCallback((wallbook) => {
+    setSelectedWallbook(wallbook);
+    setShowDeleteModal(true);
+  }, []);
+
+  const handleEditSubmit = useCallback(async (wallbookId, updatedText) => {
+    const token = localStorage.getItem('auth');
+    if (!token) {
+      alert('Please login to edit');
+      return;
+    }
+
+    try {
+      // Replace YOUR_API_ENDPOINT with your actual backend API URL
+      const response = await fetch(`YOUR_API_ENDPOINT/thoughts/${wallbookId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content: updatedText }),
+      });
+
+      if (response.ok) {
+        // Refresh the thoughts
+        await Iliana();
+        setShowEditModal(false);
+        setSelectedWallbook(null);
+      } else {
+        alert('Failed to update wallbook. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error updating wallbook:', error);
+      alert('An error occurred while updating.');
+    }
+  }, []);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    const token = localStorage.getItem('auth');
+    if (!token || !selectedWallbook) {
+      alert('Please login to delete');
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      // Replace YOUR_API_ENDPOINT with your actual backend API URL
+      const response = await fetch(
+        `YOUR_API_ENDPOINT/thoughts/${selectedWallbook._id}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        // Refresh the thoughts
+        await Iliana();
+        setShowDeleteModal(false);
+        setSelectedWallbook(null);
+      } else {
+        alert('Failed to delete wallbook. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error deleting wallbook:', error);
+      alert('An error occurred while deleting.');
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [selectedWallbook]);
+
   const MyProfile = JSON.parse(localStorage.getItem('noob'));
 
   useEffect(() => {
@@ -181,7 +507,9 @@ export default function GenZProfileImproved() {
                 <h1 className="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-purple-500 mb-1">
                   {MyProfile?.displayName}
                 </h1>
-                <p className="text-gray-400 text-sm">@{MyProfile?.userId.username}</p>
+                <p className="text-gray-400 text-sm">
+                  @{MyProfile?.userId.username}
+                </p>
               </div>
 
               {/* Bio */}
@@ -237,7 +565,9 @@ export default function GenZProfileImproved() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400 hidden sm:inline">Theme:</span>
+                  <span className="text-xs text-gray-400 hidden sm:inline">
+                    Theme:
+                  </span>
                   <div className="flex gap-1.5">
                     {[
                       { name: 'green', color: '#1db954' },
@@ -272,45 +602,14 @@ export default function GenZProfileImproved() {
                   </div>
                 ) : wallbooks && wallbooks.length > 0 ? (
                   wallbooks.map((wallbook, index) => (
-                    <div
+                    <WallbookCard
                       key={wallbook._id || index}
-                      className="p-4 rounded-lg border-l-4 hover:shadow-lg transition-all duration-300 cursor-pointer group"
-                      style={{
-                        background: `linear-gradient(to bottom right, ${wallbookColor}1A, ${wallbookColor}0D)`,
-                        borderLeftColor: wallbookColor,
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = `linear-gradient(to bottom right, ${wallbookColor}26, ${wallbookColor}14)`;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = `linear-gradient(to bottom right, ${wallbookColor}1A, ${wallbookColor}0D)`;
-                      }}
-                    >
-                      <div className="flex flex-col h-full">
-                        <div
-                          className="text-2xl mb-2 opacity-50 group-hover:opacity-70 transition-opacity"
-                          style={{ color: wallbookColor }}
-                        >
-                          "
-                        </div>
-                        <p className="text-sm leading-relaxed mb-3 flex-grow text-gray-200">
-                          {wallbook.content}
-                        </p>
-                        <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-700/30">
-                          <span
-                            className="text-xs font-medium"
-                            style={{ color: wallbookColor }}
-                          >
-                            {wallbook.username || 'Anonymous'}
-                          </span>
-                          <span className="text-xs text-gray-400">
-                            {wallbook.createdAt
-                              ? new Date(wallbook.createdAt).toLocaleDateString()
-                              : ''}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                      wallbook={wallbook}
+                      index={index}
+                      wallbookColor={wallbookColor}
+                      onEdit={handleEditClick}
+                      onDelete={handleDeleteClick}
+                    />
                   ))
                 ) : (
                   <div className="col-span-2 text-center py-8 text-gray-400">
@@ -384,6 +683,91 @@ export default function GenZProfileImproved() {
           <span className="font-bold text-fuchsia-500">PRIYAM PATHAK</span>
         </p>
       </footer>
+
+      {/* Edit Modal */}
+      <AnimatePresence>
+        {showEditModal && selectedWallbook && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            onClick={() => {
+              setShowEditModal(false);
+              setSelectedWallbook(null);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative"
+            >
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setSelectedWallbook(null);
+                }}
+                className="absolute -top-4 -right-4 bg-gray-800 hover:bg-gray-700 text-white rounded-full p-2 shadow-lg z-10"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <EditWallbookForm
+                wallbook={selectedWallbook}
+                onSubmit={handleEditSubmit}
+                onCancel={() => {
+                  setShowEditModal(false);
+                  setSelectedWallbook(null);
+                }}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Modal */}
+      <AnimatePresence>
+        {showDeleteModal && selectedWallbook && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            onClick={() => {
+              setShowDeleteModal(false);
+              setSelectedWallbook(null);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative"
+            >
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setSelectedWallbook(null);
+                }}
+                className="absolute -top-4 -right-4 bg-gray-800 hover:bg-gray-700 text-white rounded-full p-2 shadow-lg z-10"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <DeleteConfirmationModal
+                wallbook={selectedWallbook}
+                onConfirm={handleDeleteConfirm}
+                onCancel={() => {
+                  setShowDeleteModal(false);
+                  setSelectedWallbook(null);
+                }}
+                isDeleting={isDeleting}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
