@@ -114,8 +114,9 @@ const FloatingWallbook = React.memo(
 
     const handleViewProfile = async (e) => {
       // Add your navigation logic here
+      console;
       let userId = e;
-      await dispatch({ userId });
+      await dispatch(ShowProfile({ userId }));
       navigate('/profilia');
       setMenuOpen(false);
     };
