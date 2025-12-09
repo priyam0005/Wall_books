@@ -117,7 +117,7 @@ const FloatingWallbook = React.memo(
       console.log(e);
       let userId = e;
       await dispatch(ShowProfile({ userId }));
-      navigate('/profilia');
+      navigate('/Profilia');
       setMenuOpen(false);
     };
 
