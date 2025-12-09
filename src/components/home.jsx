@@ -117,7 +117,7 @@ const FloatingWallbook = React.memo(
 
     const handleViewProfile = async (e) => {
       // Add your navigation logic here
-      console.log(e);
+      console.log(e._id);
       let userId = e;
       await dispatch(ShowProfile({ userId }));
       navigate('/Profilia');
@@ -205,7 +205,7 @@ const FloatingWallbook = React.memo(
               {menuOpen && (
                 <div className="absolute right-0 mt-1 bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 z-50 min-w-[140px]">
                   <button
-                    onClick={() => handleViewProfile(wallbook.userId._id)}
+                    onClick={() => handleViewProfile(wallbook.userId)}
                     className="w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-gray-800 transition-colors flex items-center gap-2"
                   >
                     <User className="w-4 h-4" />
