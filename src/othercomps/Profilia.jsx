@@ -71,7 +71,7 @@ export default function GenZProfileImproved() {
   const [activeTab, setActiveTab] = useState('about');
   const [showAllFriends, setShowAllFriends] = useState(false);
   const [connecting, setConnecting] = useState(false);
-  const [req, setreq] = useState();
+  const [requestSent, setRequestSent] = useState(false); // Track if request was sent
   const [isLoading, setIsLoading] = useState(true);
   const [wallbooks, setWallbooks] = useState([]);
   const [wallbooksLoading, setWallbooksLoading] = useState(true);
@@ -132,17 +132,29 @@ export default function GenZProfileImproved() {
   };
 
   const handleClick = async () => {
-    const Reciever_Id = users.userId._id;
-    const result = await dispatch(connected({ token, Reciever_Id }));
-
-    setConnecting(true);
-
-    if (connected.fulfilled.match(result)) {
-      setConnecting(false);
+    // Prevent multiple clicks if request already sent
+    if (requestSent || connecting) {
+      return;
     }
 
-    setreq(response);
-    toast.success('Request sent successfully');
+    const Reciever_Id = users.userId._id;
+    setConnecting(true);
+
+    try {
+      const result = await dispatch(connected({ token, Reciever_Id }));
+
+      if (connected.fulfilled.match(result)) {
+        setRequestSent(true); // Mark request as sent
+        toast.success('Request sent successfully');
+      } else {
+        toast.error('Failed to send request');
+      }
+    } catch (error) {
+      toast.error('An error occurred');
+      console.error('Error sending request:', error);
+    } finally {
+      setConnecting(false);
+    }
   };
 
   const handleMessage = () => alert('Opening chat... 💬');
@@ -195,76 +207,75 @@ export default function GenZProfileImproved() {
 
   return (
     <div className="min-h-screen space-y-5 bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white">
+      {/* Move Toaster outside conditional rendering */}
+      <Toaster
+        position="top-center"
+        reverseOrder={false}
+        gutter={12}
+        containerStyle={{
+          top: 24,
+          left: 20,
+          right: 20,
+          maxWidth: 'calc(100vw - 40px)',
+          margin: '0 auto',
+          pointerEvents: 'none',
+        }}
+        toastOptions={{
+          style: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            padding: '16px 20px',
+            borderRadius: '12px',
+            minWidth: '280px',
+            maxWidth: '90vw',
+            fontFamily:
+              'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto',
+            fontSize: '1rem',
+            lineHeight: '1.25',
+            fontWeight: '500',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            backgroundColor: 'rgba(45, 55, 72, 0.9)',
+            color: '#E2E8F0',
+            boxShadow: '0 8px 16px rgba(0, 0, 0, 0.4)',
+            gap: '8px',
+            transition: 'all 0.3s ease-out',
+          },
+          duration: 3500,
+          success: {
+            icon: '🎉',
+            iconTheme: {
+              primary: '#48BB78',
+              secondary: '#1A202C',
+            },
+            style: {
+              backgroundColor: 'rgba(56, 161, 105, 0.9)',
+              color: '#FFFFFF',
+              boxShadow: '0 8px 16px rgba(30, 90, 50, 0.4)',
+            },
+          },
+          error: {
+            icon: '🚨',
+            iconTheme: {
+              primary: '#F56565',
+              secondary: '#1A202C',
+            },
+            style: {
+              backgroundColor: 'rgba(229, 62, 62, 0.9)',
+              color: '#FFFFFF',
+              boxShadow: '0 8px 16px rgba(180, 40, 40, 0.4)',
+            },
+          },
+        }}
+      />
+
       <div className="flex items-center justify-center h-24 bg-gradient-to-br from-black via-gray-900 to-black">
         <h2 className="text-4xl font-bold bg-gradient-to-r from-gray-100 via-gray-300 to-gray-600 bg-clip-text text-transparent drop-shadow-2xl relative">
           Welcome To SocialNet
           <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-blue-500/20 blur-2xl animate-pulse -z-10"></div>
         </h2>
       </div>
-
-      {req === true && (
-        <Toaster
-          position="top-center"
-          reverseOrder={false}
-          gutter={12}
-          containerStyle={{
-            top: 24,
-            left: 20,
-            right: 20,
-            maxWidth: 'calc(100vw - 40px)',
-            margin: '0 auto',
-            pointerEvents: 'none',
-          }}
-          toastOptions={{
-            style: {
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-start',
-              padding: '16px 20px',
-              borderRadius: '12px',
-              minWidth: '280px',
-              maxWidth: '90vw',
-              fontFamily:
-                'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto',
-              fontSize: '1rem',
-              lineHeight: '1.25',
-              fontWeight: '500',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-              backgroundColor: 'rgba(45, 55, 72, 0.9)',
-              color: '#E2E8F0',
-              boxShadow: '0 8px 16px rgba(0, 0, 0, 0.4)',
-              gap: '8px',
-              transition: 'all 0.3s ease-out',
-            },
-            duration: 3500,
-            success: {
-              icon: '🎉',
-              iconTheme: {
-                primary: '#48BB78',
-                secondary: '#1A202C',
-              },
-              style: {
-                backgroundColor: 'rgba(56, 161, 105, 0.9)',
-                color: '#FFFFFF',
-                boxShadow: '0 8px 16px rgba(30, 90, 50, 0.4)',
-              },
-            },
-            error: {
-              icon: '🚨',
-              iconTheme: {
-                primary: '#F56565',
-                secondary: '#1A202C',
-              },
-              style: {
-                backgroundColor: 'rgba(229, 62, 62, 0.9)',
-                color: '#FFFFFF',
-                boxShadow: '0 8px 16px rgba(180, 40, 40, 0.4)',
-              },
-            },
-          }}
-        />
-      )}
 
       <div className="max-w-5xl mx-auto px-1 rounded-3xl relative z-10">
         <div className="flex flex-col lg:flex-col gap-6">
@@ -299,9 +310,9 @@ export default function GenZProfileImproved() {
                 <div className="flex flex-col space-y-4 mt-6">
                   <button
                     onClick={handleClick}
-                    disabled={connecting}
+                    disabled={connecting || requestSent}
                     className={`w-full rounded-3xl py-3 text-white font-semibold transition shadow-lg ${
-                      connecting
+                      connecting || requestSent
                         ? 'bg-gray-600 cursor-not-allowed'
                         : 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 shadow-green-500/30'
                     }`}
@@ -311,6 +322,8 @@ export default function GenZProfileImproved() {
                         <Loader2 className="w-4 h-4 animate-spin" />
                         Connecting...
                       </span>
+                    ) : requestSent ? (
+                      'Request Sent ✓'
                     ) : (
                       'Connect'
                     )}
