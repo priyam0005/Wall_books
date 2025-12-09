@@ -24,7 +24,7 @@ import { thought } from '../store/thoughts/getThought';
 import { createThought } from '../store/thoughts/createThought';
 import chica from '../assets/chica.gif';
 import { ShowProfile } from '../store/userProfile/getProfile';
-import { useDispatch } from 'react-redux';
+
 // SVG Lines connecting wallbooks
 const WebConnections = React.memo(({ wallbooks, containerRef }) => {
   const [connections, setConnections] = useState([]);
@@ -101,7 +101,7 @@ const FloatingWallbook = React.memo(
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
-    console.log(wallbook)
+    console.log(wallbook);
 
     // Close menu when clicking outside
     React.useEffect(() => {
