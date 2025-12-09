@@ -101,6 +101,8 @@ const FloatingWallbook = React.memo(
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
+    console.log(wallbook)
+
     // Close menu when clicking outside
     React.useEffect(() => {
       const handleClickOutside = (event) => {
