@@ -23,7 +23,8 @@ import { useNavigate } from 'react-router-dom';
 import { thought } from '../store/thoughts/getThought';
 import { createThought } from '../store/thoughts/createThought';
 import chica from '../assets/chica.gif';
-
+import { ShowProfile } from '../store/userProfile/getProfile';
+import { useDispatch } from 'react-redux';
 // SVG Lines connecting wallbooks
 const WebConnections = React.memo(({ wallbooks, containerRef }) => {
   const [connections, setConnections] = useState([]);
@@ -97,6 +98,8 @@ const FloatingWallbook = React.memo(
     const [menuOpen, setMenuOpen] = React.useState(false);
     const menuRef = React.useRef(null);
 
+    const dispatch = useDispatch();
+
     // Close menu when clicking outside
     React.useEffect(() => {
       const handleClickOutside = (event) => {
@@ -109,9 +112,11 @@ const FloatingWallbook = React.memo(
         document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleViewProfile = () => {
+    const handleViewProfile = async (e) => {
       // Add your navigation logic here
-      console.log(`Navigating to profile: ${wallbook.author}`);
+      let userId = e;
+      await dispatch({ userId });
+      navigate('/profilia');
       setMenuOpen(false);
     };
 
@@ -196,7 +201,7 @@ const FloatingWallbook = React.memo(
               {menuOpen && (
                 <div className="absolute right-0 mt-1 bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 z-50 min-w-[140px]">
                   <button
-                    onClick={handleViewProfile}
+                    onClick={() => handleViewProfile(wallbook.userId)}
                     className="w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-gray-800 transition-colors flex items-center gap-2"
                   >
                     <User className="w-4 h-4" />
@@ -241,6 +246,8 @@ const HomePage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const feedData = useSelector((state) => state.Iliana?.feed);
+
+  const handleClick = (e) => {};
 
   // Determine items per page based on screen size
   useEffect(() => {
