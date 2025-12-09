@@ -304,6 +304,7 @@ const HomePage = () => {
     if (feedData?.thoughts?.length > 0) {
       const mappedWallbooks = feedData.thoughts.map((item) => ({
         id: item._id,
+        userId: item.userId,
         text: item.content,
         author: item.userId?.username || 'Anonymous',
         timestamp: new Date(item.createdAt),
