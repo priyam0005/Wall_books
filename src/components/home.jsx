@@ -17,6 +17,8 @@ import {
   ChevronRight,
   User,
   MoreVertical,
+  Send,
+  AlertCircle,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +26,138 @@ import { thought } from '../store/thoughts/getThought';
 import { createThought } from '../store/thoughts/createThought';
 import chica from '../assets/chica.gif';
 import { ShowProfile } from '../store/userProfile/getProfile';
+
+const NewWallbookForm = ({ onSubmit }) => {
+  const [text, setText] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const maxLength = 500;
+  const remainingChars = maxLength - text.length;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!text.trim()) {
+      setError('Please write something before posting');
+      return;
+    }
+
+    if (text.length > maxLength) {
+      setError(`Text must be ${maxLength} characters or less`);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      await onSubmit({ text: text.trim() });
+      setText('');
+    } catch (err) {
+      setError('Failed to post. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleTextChange = (e) => {
+    setText(e.target.value);
+    if (error) setError('');
+  };
+
+  return (
+    <motion.div
+      className="bg-gradient-to-br from-gray-900 to-slate-900 border border-gray-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+      initial={{ y: 20 }}
+      animate={{ y: 0 }}
+    >
+      {/* Header */}
+      <div className="bg-slate-900/80 border-b border-gray-800 px-6 py-4">
+        <h2 className="text-xl font-bold text-white">Share Your Thoughts</h2>
+        <p className="text-sm text-gray-400 mt-1">
+          Express yourself to the world
+        </p>
+      </div>
+
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="p-6">
+        <div className="space-y-4">
+          {/* Text Area */}
+          <div className="relative">
+            <textarea
+              value={text}
+              onChange={handleTextChange}
+              placeholder="What's on your mind?"
+              className="w-full bg-slate-800/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-slate-600 focus:ring-2 focus:ring-slate-700/50 resize-none transition-all duration-200 min-h-[150px]"
+              maxLength={maxLength}
+              disabled={isSubmitting}
+            />
+
+            {/* Character Counter */}
+            <div className="absolute bottom-3 right-3">
+              <span
+                className={`text-xs font-medium ${
+                  remainingChars < 50
+                    ? remainingChars < 20
+                      ? 'text-red-400'
+                      : 'text-yellow-400'
+                    : 'text-gray-500'
+                }`}
+              >
+                {remainingChars}
+              </span>
+            </div>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 bg-red-900/20 border border-red-800/50 rounded-lg px-4 py-3"
+            >
+              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+              <p className="text-sm text-red-300">{error}</p>
+            </motion.div>
+          )}
+
+          {/* Submit Button */}
+          <motion.button
+            type="submit"
+            disabled={isSubmitting || !text.trim()}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-full bg-slate-800 hover:bg-slate-700 disabled:bg-slate-900 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 border border-gray-700 disabled:border-gray-800 disabled:opacity-50"
+          >
+            {isSubmitting ? (
+              <>
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                />
+                <span>Posting...</span>
+              </>
+            ) : (
+              <>
+                <Send className="w-5 h-5" />
+                <span>Post Wallbook</span>
+              </>
+            )}
+          </motion.button>
+        </div>
+      </form>
+
+      {/* Footer Tip */}
+      <div className="bg-slate-900/60 border-t border-gray-800 px-6 py-3">
+        <p className="text-xs text-gray-500 text-center">
+          Your thoughts will be visible to everyone on the platform
+        </p>
+      </div>
+    </motion.div>
+  );
+};
 
 // SVG Lines connecting wallbooks
 const WebConnections = React.memo(({ wallbooks, containerRef }) => {
@@ -250,8 +384,6 @@ const HomePage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const feedData = useSelector((state) => state.Iliana?.feed);
-
-  const handleClick = (e) => {};
 
   // Determine items per page based on screen size
   useEffect(() => {
