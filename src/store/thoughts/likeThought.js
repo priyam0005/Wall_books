@@ -1,98 +1,81 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-// Async thunk for fetching a thought
-export const fetchThought = createAsyncThunk(
-  'thoughts/fetchThought',
-  async (thoughtId, { rejectWithValue }) => {
-    try {
-      const response = await axios.get(`/api/thoughts/${thoughtId}`);
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data || 'Failed to fetch thought');
-    }
-  }
-);
-
-// Async thunk for liking a thought
+// Like/Unlike a thought
 export const likeThought = createAsyncThunk(
-  'thoughts/likeThought',
-  async (thoughtId, { rejectWithValue }) => {
+  'likeThought/post',
+  async ({ thoughtId, token }, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`/api/thoughts/${thoughtId}/like`);
-      return { thoughtId, data: response.data };
+      if (!token) {
+        throw new Error('Authentication token is required');
+      }
+
+      if (!thoughtId) {
+        throw new Error('Thought ID is required');
+      }
+
+      const response = await axios.post(
+        `https://sc-net.onrender.com/api/thoughts/${thoughtId}/like`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (response && response.data) {
+        console.log('Thought like toggled:', response.data);
+        return {
+          thoughtId,
+          thought: response.data.thought,
+          isLiked: response.data.isLiked,
+        };
+      } else {
+        throw new Error('No response data received');
+      }
     } catch (error) {
-      return rejectWithValue(error.response?.data || 'Failed to like thought');
+      console.error('Error liking thought:', error);
+      return rejectWithValue(error.response?.data?.error || error.message);
     }
   }
 );
 
-const thoughtsSlice = createSlice({
-  name: 'thoughts',
-  initialState: {
-    thoughts: {},
-    loading: false,
-    error: null,
-    likeLoading: {},
-  },
+const initialState = {
+  loading: false,
+  error: null,
+  likedThoughts: {},
+};
+
+const likeThoughtSlice = createSlice({
+  name: 'likeThought',
+  initialState,
   reducers: {
-    clearError: (state) => {
+    clearLikeError: (state) => {
       state.error = null;
-    },
-    // Optimistic like update
-    optimisticLike: (state, action) => {
-      const { thoughtId } = action.payload;
-      if (state.thoughts[thoughtId]) {
-        state.thoughts[thoughtId].liked = !state.thoughts[thoughtId].liked;
-        state.thoughts[thoughtId].likesCount = state.thoughts[thoughtId].liked
-          ? state.thoughts[thoughtId].likesCount + 1
-          : state.thoughts[thoughtId].likesCount - 1;
-      }
     },
   },
   extraReducers: (builder) => {
     builder
-      // Fetch thought
-      .addCase(fetchThought.pending, (state) => {
+      .addCase(likeThought.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchThought.fulfilled, (state, action) => {
-        state.loading = false;
-        state.thoughts[action.payload.id] = action.payload;
-      })
-      .addCase(fetchThought.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-      // Like thought
-      .addCase(likeThought.pending, (state, action) => {
-        state.likeLoading[action.meta.arg] = true;
-        state.error = null;
-      })
       .addCase(likeThought.fulfilled, (state, action) => {
-        const { thoughtId, data } = action.payload;
-        state.likeLoading[thoughtId] = false;
-        if (state.thoughts[thoughtId]) {
-          state.thoughts[thoughtId].liked = data.liked;
-          state.thoughts[thoughtId].likesCount = data.likesCount;
-        }
+        state.loading = false;
+        const { thoughtId, thought, isLiked } = action.payload;
+        state.likedThoughts[thoughtId] = {
+          thought,
+          isLiked,
+        };
       })
       .addCase(likeThought.rejected, (state, action) => {
-        state.likeLoading[action.meta.arg] = false;
+        state.loading = false;
         state.error = action.payload;
       });
   },
 });
 
-export const { clearError, optimisticLike } = thoughtsSlice.actions;
-
-// Selectors
-export const selectThought = (state, thoughtId) =>
-  state.thoughts.thoughts[thoughtId];
-export const selectThoughtsLoading = (state) => state.thoughts.loading;
-export const selectLikeLoading = (state, thoughtId) =>
-  state.thoughts.likeLoading[thoughtId] || false;
-export const selectError = (state) => state.thoughts.error;
-
-export default thoughtsSlice.reducer;
+export const { clearLikeError } = likeThoughtSlice.actions;
+export default likeThoughtSlice.reducer;

@@ -26,13 +26,7 @@ import { thought } from '../store/thoughts/getThought';
 import { createThought } from '../store/thoughts/createThought';
 import chica from '../assets/chica.gif';
 import { ShowProfile } from '../store/userProfile/getProfile';
-import {
-  likeThought,
-  fetchThought,
-  selectThought,
-  selectLikeLoading,
-} from '../store/thoughts/likeThought';
-
+import { likeThought } from '../store/thoughts/likeThought';
 const NewWallbookForm = ({ onSubmit }) => {
   const [text, setText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -240,17 +234,19 @@ const FloatingWallbook = React.memo(
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const thought = useSelector((state) => selectThought(state, wallbook.id));
-    const isliking = useSelector((state) =>
-      selectLikeLoading(state, wallbook.id)
+
+    const { loading, error, likedThoughts } = useSelector(
+      (state) => state.socrates
     );
 
-    useEffect(() => {
-      dispatch(fetchThought(wallbook.id));
-    }, [wallbook.id, dispatch]);
+    const thoughtId = wallbook.id;
+
+    const thoughtData = likedThoughts[thoughtId];
+
+    const token = localStorage.getItem('auth');
 
     const handleLike = () => {
-      dispatch(likeThought(wallbook.id));
+      dispatch(likeThought({ thoughtId: wallbook.id, token }));
     };
 
     console.log(wallbook);
@@ -369,19 +365,19 @@ const FloatingWallbook = React.memo(
           </div>
         </div>
         <button
-          onClick={handleLike}
+          onClick={''}
           disabled={isliking}
           className={`flex items-center space-x-1 text-sm font-medium transition-colors ${
-            wallbook.liked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'
+            thoughtData?.isLiked
+              ? 'text-red-500'
+              : 'text-gray-400 hover:text-red-500'
           }`}
           aria-label="Like"
         >
           <Heart
-            className={`w-5 h-5 ${
-              wallbook.liked ? 'fill-current' : 'stroke-current'
-            }`}
+            className={`w-5 h-5 ${loading ? 'fill-current' : 'stroke-current'}`}
           />
-          <span>{wallbook?.likeCount}</span>
+          <span>{thoughtData.thought.likeCount}</span>
         </button>
       </motion.div>
     );
