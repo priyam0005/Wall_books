@@ -368,16 +368,14 @@ const FloatingWallbook = React.memo(
           onClick={handleLike}
           disabled={loading}
           className={`flex items-center space-x-1 text-sm font-medium transition-colors ${
-            thoughtData?.isLiked
-              ? 'text-red-500'
-              : 'text-gray-400 hover:text-red-500'
+            loading ? 'text-red-500' : 'text-gray-400 hover:text-red-500'
           }`}
           aria-label="Like"
         >
           <Heart
             className={`w-5 h-5 ${loading ? 'fill-current' : 'stroke-current'}`}
           />
-          <span>{wallbook.likeCount}</span>
+          <span>{wallbook.likeCount || 0}</span>
         </button>
       </motion.div>
     );
