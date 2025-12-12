@@ -8,7 +8,6 @@ import React, {
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen,
-  Heart,
   Plus,
   X,
   LogIn,
@@ -26,7 +25,7 @@ import { thought } from '../store/thoughts/getThought';
 import { createThought } from '../store/thoughts/createThought';
 import chica from '../assets/chica.gif';
 import { ShowProfile } from '../store/userProfile/getProfile';
-import { likeThought } from '../store/thoughts/likeThought';
+
 const NewWallbookForm = ({ onSubmit }) => {
   const [text, setText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -175,7 +174,6 @@ const WebConnections = React.memo(({ wallbooks, containerRef }) => {
           const rect1 = card.getBoundingClientRect();
           const containerRect = containerRef.current.getBoundingClientRect();
 
-          // Connect to next 1-2 cards to create web effect
           const connectTo = Math.min(
             index + 1 + Math.floor(Math.random() * 2),
             cards.length - 1
@@ -226,36 +224,14 @@ const WebConnections = React.memo(({ wallbooks, containerRef }) => {
 
 WebConnections.displayName = 'WebConnections';
 
-// Floating Wallbook with smart positioning to avoid overlap
+// Floating Wallbook
 const FloatingWallbook = React.memo(
-  ({ wallbook, index, onToggleLike, totalCards, isMobile }) => {
+  ({ wallbook, index, totalCards, isMobile }) => {
     const [menuOpen, setMenuOpen] = React.useState(false);
     const menuRef = React.useRef(null);
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
-
-    const { loading, error, likedThoughts } = useSelector(
-      (state) => state.socrates
-    );
-
-    const thoughtId = wallbook.id;
-    const token = localStorage.getItem('auth');
-
-    const thoughtData = likedThoughts[thoughtId];
-    console.log(thoughtData);
-    const isLiked = thoughtData?.isLiked || wallbook.liked || false;
-    const likeCount = thoughtData?.likeCount || wallbook.likeCount || 0;
-    const isLiking = loading[thoughtId] || false;
-    const handleLike = () => {
-      if (!token) {
-        alert('Please login to like thoughts');
-        return;
-      }
-      dispatch(likeThought({ thoughtId: wallbook.id, token }));
-    };
-
-    console.log(wallbook);
 
     // Close menu when clicking outside
     React.useEffect(() => {
@@ -270,29 +246,25 @@ const FloatingWallbook = React.memo(
     }, []);
 
     const handleViewProfile = async (e) => {
-      // Add your navigation logic here
-      console.log(e._id);
       let userId = e._id;
       await dispatch(ShowProfile({ userId }));
       navigate('/Profilia');
       setMenuOpen(false);
     };
 
-    // Calculate non-overlapping positions using grid-based approach with randomization
+    // Calculate non-overlapping positions
     const getPosition = () => {
       const cols = isMobile ? 2 : 4;
       const rows = Math.ceil(totalCards / cols);
       const col = index % cols;
       const row = Math.floor(index / cols);
 
-      // Desktop: adjust to leave space on left (start from 15% instead of 5%)
       const leftMargin = isMobile ? 5 : 15;
       const availableWidth = isMobile ? 90 : 80;
 
       const baseLeft = (col / cols) * availableWidth + leftMargin;
       const baseTop = (row / rows) * 70 + 10;
 
-      // Add small random offset to make it look natural but avoid overlap
       const offsetX = (Math.random() - 0.5) * 8;
       const offsetY = (Math.random() - 0.5) * 8;
 
@@ -327,7 +299,7 @@ const FloatingWallbook = React.memo(
           x: { duration: 4, repeat: Infinity, ease: 'easeInOut' },
           y: { duration: 5, repeat: Infinity, ease: 'easeInOut' },
         }}
-        className="absolute bg-gray-800/90 backdrop-blur-md border border-gray-700/50 rounded-xl p-4 shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 hover:scale-105 hover:border-purple-500/50 flex flex-col justify-between w-64 md:w-72"
+        className="absolute bg-gray-800/90 backdrop-blur-md border border-gray-700/50 rounded-xl p-4 shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 hover:scale-105 hover:border-purple-500/50 w-64 md:w-72"
         style={{
           left: position.left,
           top: position.top,
@@ -337,7 +309,7 @@ const FloatingWallbook = React.memo(
         <p className="text-gray-100 text-sm leading-relaxed mb-3 line-clamp-4">
           {wallbook.text}
         </p>
-        <div className="flex justify-between items-center text-xs text-gray-400 mb-2">
+        <div className="flex justify-between items-center text-xs text-gray-400">
           <span className="font-medium text-purple-300 truncate">
             @{wallbook.author}
           </span>
@@ -370,19 +342,6 @@ const FloatingWallbook = React.memo(
             </div>
           </div>
         </div>
-        <button
-          onClick={handleLike}
-          disabled={isLiking}
-          className={`flex items-center space-x-1 text-sm font-medium transition-colors ${
-            isLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'
-          } ${isLiking ? 'opacity-50 cursor-not-allowed' : ''}`}
-          aria-label="Like"
-        >
-          <Heart
-            className={`w-5 h-5 ${isLiked ? 'fill-current' : 'stroke-current'}`}
-          />
-          <span>{likeCount}</span>
-        </button>
       </motion.div>
     );
   }
@@ -423,12 +382,14 @@ const HomePage = () => {
     () => Math.ceil(wallbooks.length / itemsPerPage),
     [wallbooks.length, itemsPerPage]
   );
+
   const currentWallbooks = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return wallbooks.slice(startIndex, startIndex + itemsPerPage);
   }, [wallbooks, currentPage, itemsPerPage]);
 
   useEffect(() => setCurrentPage(1), [wallbooks.length]);
+
   useEffect(() => {
     const token = localStorage.getItem('auth');
     setIsAuthenticated(!!token);
@@ -459,8 +420,6 @@ const HomePage = () => {
         text: item.content,
         author: item.userId?.username || 'Anonymous',
         timestamp: new Date(item.createdAt),
-        likes: item.likeCount || 0,
-        liked: false,
       }));
       setWallbooks(mappedWallbooks);
       setIsLoading(false);
@@ -492,20 +451,6 @@ const HomePage = () => {
     },
     [dispatch]
   );
-
-  const toggleLike = useCallback((id) => {
-    setWallbooks((prev) =>
-      prev.map((w) =>
-        w.id === id
-          ? {
-              ...w,
-              liked: !w.liked,
-              likes: w.liked ? w.likes - 1 : w.likes + 1,
-            }
-          : w
-      )
-    );
-  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 relative overflow-hidden">
@@ -595,7 +540,6 @@ const HomePage = () => {
                     index={index}
                     totalCards={currentWallbooks.length}
                     isMobile={isMobile}
-                    onToggleLike={toggleLike}
                   />
                 ))}
               </AnimatePresence>
