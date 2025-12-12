@@ -377,7 +377,7 @@ const FloatingWallbook = React.memo(
           <Heart
             className={`w-5 h-5 ${loading ? 'fill-current' : 'stroke-current'}`}
           />
-          <span>{thoughtData.thought.likeCount}</span>
+          <span>{wallbook.likeCount}</span>
         </button>
       </motion.div>
     );
