@@ -20,6 +20,13 @@ import {
   AlertCircle,
 } from 'lucide-react';
 
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { thought } from '../store/thoughts/getThought';
+import { createThought } from '../store/thoughts/createThought';
+import chica from '../assets/chica.gif';
+import { ShowProfile } from '../store/userProfile/getProfile';
+
 const NewWallbookForm = ({ onSubmit }) => {
   const [text, setText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,6 +72,7 @@ const NewWallbookForm = ({ onSubmit }) => {
       initial={{ y: 20 }}
       animate={{ y: 0 }}
     >
+      {/* Header */}
       <div className="bg-slate-900/80 border-b border-gray-800 px-6 py-4">
         <h2 className="text-xl font-bold text-white">Share Your Thoughts</h2>
         <p className="text-sm text-gray-400 mt-1">
@@ -72,8 +80,10 @@ const NewWallbookForm = ({ onSubmit }) => {
         </p>
       </div>
 
+      {/* Form */}
       <form onSubmit={handleSubmit} className="p-6">
         <div className="space-y-4">
+          {/* Text Area */}
           <div className="relative">
             <textarea
               value={text}
@@ -84,6 +94,7 @@ const NewWallbookForm = ({ onSubmit }) => {
               disabled={isSubmitting}
             />
 
+            {/* Character Counter */}
             <div className="absolute bottom-3 right-3">
               <span
                 className={`text-xs font-medium ${
@@ -99,6 +110,7 @@ const NewWallbookForm = ({ onSubmit }) => {
             </div>
           </div>
 
+          {/* Error Message */}
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
@@ -110,6 +122,7 @@ const NewWallbookForm = ({ onSubmit }) => {
             </motion.div>
           )}
 
+          {/* Submit Button */}
           <motion.button
             type="submit"
             disabled={isSubmitting || !text.trim()}
@@ -136,6 +149,7 @@ const NewWallbookForm = ({ onSubmit }) => {
         </div>
       </form>
 
+      {/* Footer Tip */}
       <div className="bg-slate-900/60 border-t border-gray-800 px-6 py-3">
         <p className="text-xs text-gray-500 text-center">
           Your thoughts will be visible to everyone on the platform
