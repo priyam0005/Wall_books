@@ -77,7 +77,7 @@ function SettingsModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60"
       onClick={onClose}
     >
       <div
@@ -89,7 +89,7 @@ function SettingsModal({
             <h2 className="text-xl font-semibold text-white">User Settings</h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="text-gray-400 hover:text-white"
             >
               <svg
                 className="w-6 h-6"
@@ -150,14 +150,14 @@ function SettingsModal({
                 />
                 <label
                   htmlFor="profile-pic-upload"
-                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded cursor-pointer transition-colors text-center"
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded cursor-pointer text-center"
                 >
                   Upload Image
                 </label>
                 {previewPic && (
                   <button
                     onClick={handleRemovePic}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition-colors"
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded"
                   >
                     Remove
                   </button>
@@ -181,7 +181,7 @@ function SettingsModal({
               onKeyPress={handleKeyPress}
               placeholder="Enter your display name"
               maxLength="20"
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
             <p className="mt-2 text-xs text-gray-400">
               Leave empty to use your default tag
@@ -191,13 +191,13 @@ function SettingsModal({
           <div className="flex justify-end space-x-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
-              className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
+              className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium"
             >
               Save Changes
             </button>
@@ -263,10 +263,10 @@ const Message = React.memo(({ message, onReply, isBeingRepliedTo }) => {
 
   return (
     <div
-      className={`group relative px-4 py-3 transition-all duration-200 border border-gray-800 rounded-lg mb-2 ${
+      className={`group relative px-4 py-3 border border-gray-800 rounded-lg mb-2 ${
         isBeingRepliedTo
-          ? 'bg-indigo-900 bg-opacity-30 border-indigo-500 shadow-lg shadow-indigo-500/20'
-          : 'hover:bg-gray-800 hover:bg-opacity-40 hover:border-gray-700 hover:shadow-md'
+          ? 'bg-indigo-900 bg-opacity-30 border-indigo-500'
+          : 'hover:bg-gray-800 hover:bg-opacity-40 hover:border-gray-700'
       }`}
       onMouseEnter={() => setShowReplyButton(true)}
       onMouseLeave={() => setShowReplyButton(false)}
@@ -296,7 +296,7 @@ const Message = React.memo(({ message, onReply, isBeingRepliedTo }) => {
           </span>
         </div>
       )}
-      <div className="flex items-start space-x-3 px-4 py-2 border-l-2 border-transparent hover:border-gray-700">
+      <div className="flex items-start space-x-3 px-4 py-2">
         {profilePic ? (
           <img
             src={profilePic}
@@ -327,7 +327,7 @@ const Message = React.memo(({ message, onReply, isBeingRepliedTo }) => {
         {showReplyButton && !isBeingRepliedTo && onReply && (
           <button
             onClick={handleReplyClick}
-            className="opacity-0 group-hover:opacity-100 transition-opacity bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded p-1.5 flex-shrink-0"
+            className="opacity-0 group-hover:opacity-100 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white rounded p-1.5 flex-shrink-0"
             title="Reply to this message"
           >
             <svg
@@ -362,8 +362,7 @@ export default function PublicChat() {
   const [isConnected, setIsConnected] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
   const [profilePic, setProfilePic] = useState('');
-  const [isLoadingMessages, setIsLoadingMessages] = useState(true); // NEW: Loading state
-  const [isFading, setIsFading] = useState(false); // NEW: Fade animation state
+  const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   const messagesEndRef = useRef(null);
   const socketRef = useRef(null);
   const messageInputRef = useRef(null);
@@ -388,19 +387,15 @@ export default function PublicChat() {
   }, []);
 
   useEffect(() => {
-    socketRef.current = io(
-      SOCKET_URL,
-
-      {
-        reconnection: true,
-        reconnectionAttempts: Infinity,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-        timeout: 20000,
-        transports: ['websocket', 'polling'],
-        autoConnect: true,
-      }
-    );
+    socketRef.current = io(SOCKET_URL, {
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+      transports: ['websocket', 'polling'],
+      autoConnect: true,
+    });
 
     socketRef.current.on('connect', () => {
       console.log('Connected to server');
@@ -419,12 +414,7 @@ export default function PublicChat() {
 
     socketRef.current.on('public_chat_history', (msgs) => {
       setMessages(msgs.reverse());
-
-      // NEW: Start fade out animation when messages are loaded
-      setIsFading(true);
-      setTimeout(() => {
-        setIsLoadingMessages(false);
-      }, 500); // Wait for fade animation to complete
+      setIsLoadingMessages(false);
     });
 
     socketRef.current.on('received_message', (msg) => {
@@ -482,7 +472,9 @@ export default function PublicChat() {
   }, [addSystemMessage]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
+    }
   }, [messages.length]);
 
   const handleSendMessage = useCallback(() => {
@@ -542,45 +534,22 @@ export default function PublicChat() {
 
   const handleReply = useCallback((message) => {
     setReplyingTo(message);
-    requestAnimationFrame(() => {
-      if (messageInputRef.current) {
-        messageInputRef.current.focus();
-        messageInputRef.current.scrollIntoView({
-          behavior: 'smooth',
-          block: 'nearest',
-        });
-      }
-    });
+    if (messageInputRef.current) {
+      messageInputRef.current.focus();
+    }
   }, []);
 
   return (
     <div className="h-screen flex items-center justify-center from-gray-900 via-black to-gray-800">
-      {/* NEW: Miku Loading Overlay */}
       {isLoadingMessages && (
-        <div
-          className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-500 ${
-            isFading ? 'opacity-0' : 'opacity-100'
-          }`}
-          style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.85)',
-          }}
-        >
-          <div
-            className={`flex flex-col items-center transition-all duration-500 ${
-              isFading ? 'scale-90 opacity-0' : 'scale-100 opacity-100'
-            }`}
-          >
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-85">
+          <div className="flex flex-col items-center">
             <img
               src={mikugif}
               alt="Loading..."
               className="w-80 h-80 object-contain"
-              style={{
-                filter: 'drop-shadow(0 0 30px rgba(0, 255, 255, 0.4))',
-                mixBlendMode: 'multiply',
-                backgroundColor: 'transparent',
-              }}
             />
-            <p className="mt-4 text-cyan-400 text-xl font-semibold drop-shadow-lg animate-pulse">
+            <p className="mt-4 text-cyan-400 text-xl font-semibold">
               Loading Messages...
             </p>
           </div>
@@ -603,14 +572,17 @@ export default function PublicChat() {
             </div>
           </div>
           <div className="flex items-center space-x-2 from-gray-900 via-black to-gray-800 bg-opacity-50 px-3 py-1.5 rounded-full">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
             <span className="text-gray-300 text-sm font-medium">
               {onlineCount} online
             </span>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto from-slate-900 via-black to-slate-800 min-h-0">
+        <div
+          ref={messagesEndRef}
+          className="flex-1 overflow-y-auto from-slate-900 via-black to-slate-800 min-h-0"
+        >
           <div className="w-full">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-500 space-y-4 py-20">
@@ -664,13 +636,12 @@ export default function PublicChat() {
                 );
               })
             )}
-            <div ref={messagesEndRef} />
           </div>
         </div>
 
         <div className="bg-gray-800 border-t border-gray-700 p-4 flex-shrink-0">
           {replyingTo && (
-            <div className="mb-3 bg-gray-700 rounded-lg p-3 flex items-center justify-between animate-in">
+            <div className="mb-3 bg-gray-700 rounded-lg p-3 flex items-center justify-between">
               <div className="flex items-center space-x-2 text-sm flex-1 min-w-0">
                 <svg
                   className="w-4 h-4 text-indigo-400 flex-shrink-0"
@@ -698,7 +669,7 @@ export default function PublicChat() {
               </div>
               <button
                 onClick={() => setReplyingTo(null)}
-                className="text-gray-400 hover:text-white transition-colors ml-2 flex-shrink-0"
+                className="text-gray-400 hover:text-white ml-2 flex-shrink-0"
                 title="Cancel reply (ESC)"
               >
                 <svg
@@ -734,7 +705,7 @@ export default function PublicChat() {
               <button
                 onClick={handleSendMessage}
                 disabled={!messageInput.trim()}
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white p-2 rounded-lg transition-colors"
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white p-2 rounded-lg"
               >
                 <svg
                   className="w-5 h-5"
@@ -753,7 +724,7 @@ export default function PublicChat() {
             </div>
             <button
               onClick={() => setIsSettingsOpen(true)}
-              className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-gray-700 rounded-lg ml-2"
+              className="text-gray-400 hover:text-white p-2 hover:bg-gray-700 rounded-lg ml-2"
               title="Settings"
             >
               <svg
