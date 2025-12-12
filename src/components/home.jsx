@@ -365,8 +365,8 @@ const FloatingWallbook = React.memo(
           </div>
         </div>
         <button
-          onClick={''}
-          disabled={isliking}
+          onClick={handleLike}
+          disabled={loading}
           className={`flex items-center space-x-1 text-sm font-medium transition-colors ${
             thoughtData?.isLiked
               ? 'text-red-500'
