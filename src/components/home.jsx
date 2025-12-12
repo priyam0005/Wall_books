@@ -240,13 +240,18 @@ const FloatingWallbook = React.memo(
     );
 
     const thoughtId = wallbook.id;
+    const token = localStorage.getItem('auth');
 
     const thoughtData = likedThoughts[thoughtId];
     console.log(thoughtData);
-
-    const token = localStorage.getItem('auth');
+    const isLiked = thoughtData?.isLiked || wallbook.liked || false;
+    const likeCount = thoughtData?.likeCount || wallbook.likeCount || 0;
 
     const handleLike = () => {
+      if (!token) {
+        alert('Please login to like thoughts');
+        return;
+      }
       dispatch(likeThought({ thoughtId: wallbook.id, token }));
     };
 
@@ -367,16 +372,16 @@ const FloatingWallbook = React.memo(
         </div>
         <button
           onClick={handleLike}
-          disabled={loading}
+          disabled={isLiking}
           className={`flex items-center space-x-1 text-sm font-medium transition-colors ${
-            loading ? 'text-red-500' : 'text-gray-400 hover:text-red-500'
-          }`}
+            isLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'
+          } ${isLiking ? 'opacity-50 cursor-not-allowed' : ''}`}
           aria-label="Like"
         >
           <Heart
-            className={`w-5 h-5 ${loading ? 'fill-current' : 'stroke-current'}`}
+            className={`w-5 h-5 ${isLiked ? 'fill-current' : 'stroke-current'}`}
           />
-          <span>{wallbook.likeCount || 0}</span>
+          <span>{likeCount}</span>
         </button>
       </motion.div>
     );
