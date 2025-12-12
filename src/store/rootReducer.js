@@ -15,6 +15,7 @@ import create from './thoughts/createThought';
 import myThought from './thoughts/mythought';
 import delThought from '../store/thoughts/deleteThought';
 import upddateThought from '../store/thoughts/updateThought';
+import like from '../store/thoughts/likeThought';
 
 const rootReducer = combineReducers({
   just: login,
@@ -30,6 +31,7 @@ const rootReducer = combineReducers({
   Amore: create,
   Aurelius: delThought,
   Plato: upddateThought,
+  socrates: like,
 });
 
 export default rootReducer;

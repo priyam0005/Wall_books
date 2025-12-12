@@ -26,6 +26,12 @@ import { thought } from '../store/thoughts/getThought';
 import { createThought } from '../store/thoughts/createThought';
 import chica from '../assets/chica.gif';
 import { ShowProfile } from '../store/userProfile/getProfile';
+import {
+  likeThought,
+  fetchThought,
+  selectThought,
+  selectLikeLoading,
+} from '../store/thoughts/likeThought';
 
 const NewWallbookForm = ({ onSubmit }) => {
   const [text, setText] = useState('');
@@ -234,6 +240,18 @@ const FloatingWallbook = React.memo(
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const thought = useSelector((state) => selectThought(state, wallbook.id));
+    const isliking = useSelector((state) =>
+      selectLikeLoading(state, wallbook.id)
+    );
+
+    useEffect(() => {
+      dispatch(fetchThought(wallbook.id));
+    }, [wallbook.id, dispatch]);
+
+    const handleLike = () => {
+      dispatch(likeThought(wallbook.id));
+    };
 
     console.log(wallbook);
 
@@ -351,7 +369,8 @@ const FloatingWallbook = React.memo(
           </div>
         </div>
         <button
-          onClick={() => onToggleLike(wallbook.id)}
+          onClick={handleLike}
+          disabled={isliking}
           className={`flex items-center space-x-1 text-sm font-medium transition-colors ${
             wallbook.liked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'
           }`}
@@ -362,7 +381,7 @@ const FloatingWallbook = React.memo(
               wallbook.liked ? 'fill-current' : 'stroke-current'
             }`}
           />
-          <span>{wallbook.likes}</span>
+          <span>{wallbook?.likeCount}</span>
         </button>
       </motion.div>
     );
