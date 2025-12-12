@@ -242,7 +242,7 @@ const FloatingWallbook = React.memo(
     const thoughtId = wallbook.id;
 
     const thoughtData = likedThoughts[thoughtId];
-    console.log(thoughtData.thoughts.likes.length);
+    console.log(thoughtData?.thoughts?.likeCount);
 
     const token = localStorage.getItem('auth');
 
