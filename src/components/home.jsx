@@ -372,7 +372,6 @@ const FloatingWallbook = React.memo(
         </div>
         <button
           onClick={handleLike}
-          disabled={isLiking}
           className={`flex items-center space-x-1 text-sm font-medium transition-colors ${
             isLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'
           } ${isLiking ? 'opacity-50 cursor-not-allowed' : ''}`}
