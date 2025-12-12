@@ -19,12 +19,6 @@ import {
   Send,
   AlertCircle,
 } from 'lucide-react';
-import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { thought } from '../store/thoughts/getThought';
-import { createThought } from '../store/thoughts/createThought';
-import chica from '../assets/chica.gif';
-import { ShowProfile } from '../store/userProfile/getProfile';
 
 const NewWallbookForm = ({ onSubmit }) => {
   const [text, setText] = useState('');
@@ -71,7 +65,6 @@ const NewWallbookForm = ({ onSubmit }) => {
       initial={{ y: 20 }}
       animate={{ y: 0 }}
     >
-      {/* Header */}
       <div className="bg-slate-900/80 border-b border-gray-800 px-6 py-4">
         <h2 className="text-xl font-bold text-white">Share Your Thoughts</h2>
         <p className="text-sm text-gray-400 mt-1">
@@ -79,10 +72,8 @@ const NewWallbookForm = ({ onSubmit }) => {
         </p>
       </div>
 
-      {/* Form */}
       <form onSubmit={handleSubmit} className="p-6">
         <div className="space-y-4">
-          {/* Text Area */}
           <div className="relative">
             <textarea
               value={text}
@@ -93,7 +84,6 @@ const NewWallbookForm = ({ onSubmit }) => {
               disabled={isSubmitting}
             />
 
-            {/* Character Counter */}
             <div className="absolute bottom-3 right-3">
               <span
                 className={`text-xs font-medium ${
@@ -109,7 +99,6 @@ const NewWallbookForm = ({ onSubmit }) => {
             </div>
           </div>
 
-          {/* Error Message */}
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
@@ -121,7 +110,6 @@ const NewWallbookForm = ({ onSubmit }) => {
             </motion.div>
           )}
 
-          {/* Submit Button */}
           <motion.button
             type="submit"
             disabled={isSubmitting || !text.trim()}
@@ -148,7 +136,6 @@ const NewWallbookForm = ({ onSubmit }) => {
         </div>
       </form>
 
-      {/* Footer Tip */}
       <div className="bg-slate-900/60 border-t border-gray-800 px-6 py-3">
         <p className="text-xs text-gray-500 text-center">
           Your thoughts will be visible to everyone on the platform
@@ -158,7 +145,6 @@ const NewWallbookForm = ({ onSubmit }) => {
   );
 };
 
-// SVG Lines connecting wallbooks
 const WebConnections = React.memo(({ wallbooks, containerRef }) => {
   const [connections, setConnections] = useState([]);
 
@@ -224,16 +210,11 @@ const WebConnections = React.memo(({ wallbooks, containerRef }) => {
 
 WebConnections.displayName = 'WebConnections';
 
-// Floating Wallbook
 const FloatingWallbook = React.memo(
   ({ wallbook, index, totalCards, isMobile }) => {
     const [menuOpen, setMenuOpen] = React.useState(false);
     const menuRef = React.useRef(null);
 
-    const dispatch = useDispatch();
-    const navigate = useNavigate();
-
-    // Close menu when clicking outside
     React.useEffect(() => {
       const handleClickOutside = (event) => {
         if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -245,14 +226,11 @@ const FloatingWallbook = React.memo(
         document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleViewProfile = async (e) => {
-      let userId = e._id;
-      await dispatch(ShowProfile({ userId }));
-      navigate('/Profilia');
+    const handleViewProfile = (e) => {
+      console.log('View profile for:', wallbook.userId);
       setMenuOpen(false);
     };
 
-    // Calculate non-overlapping positions
     const getPosition = () => {
       const cols = isMobile ? 2 : 4;
       const rows = Math.ceil(totalCards / cols);
@@ -310,36 +288,37 @@ const FloatingWallbook = React.memo(
           {wallbook.text}
         </p>
         <div className="flex justify-between items-center text-xs text-gray-400">
-          <span className="font-medium text-purple-300 truncate">
-            @{wallbook.author}
-          </span>
-          <div className="flex items-center gap-2">
+          {/* Three-dot menu on the LEFT */}
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="p-1 hover:bg-gray-700/50 rounded-full transition-colors"
+              aria-label="More options"
+            >
+              <MoreVertical className="w-4 h-4 text-gray-400 hover:text-gray-200" />
+            </button>
+
+            {menuOpen && (
+              <div className="absolute left-0 mt-1 bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 z-50 min-w-[140px]">
+                <button
+                  onClick={() => handleViewProfile(wallbook.userId)}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-gray-800 transition-colors flex items-center gap-2"
+                >
+                  <User className="w-4 h-4" />
+                  View Profile
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Username and timestamp on the RIGHT */}
+          <div className="flex flex-col items-end gap-1">
+            <span className="font-medium text-purple-300 truncate max-w-[150px]">
+              @{wallbook.author}
+            </span>
             <span className="text-[10px]">
               {new Date(wallbook.timestamp).toLocaleTimeString()}
             </span>
-
-            {/* Three-dot menu */}
-            <div className="relative" ref={menuRef}>
-              <button
-                onClick={() => setMenuOpen(!menuOpen)}
-                className="p-1 hover:bg-gray-700/50 rounded-full transition-colors"
-                aria-label="More options"
-              >
-                <MoreVertical className="w-4 h-4 text-gray-400 hover:text-gray-200" />
-              </button>
-
-              {menuOpen && (
-                <div className="absolute right-0 mt-1 bg-gray-900 border border-gray-700 rounded-lg shadow-xl py-1 z-50 min-w-[140px]">
-                  <button
-                    onClick={() => handleViewProfile(wallbook.userId)}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-gray-800 transition-colors flex items-center gap-2"
-                  >
-                    <User className="w-4 h-4" />
-                    View Profile
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </motion.div>
@@ -350,20 +329,44 @@ const FloatingWallbook = React.memo(
 FloatingWallbook.displayName = 'FloatingWallbook';
 
 const HomePage = () => {
-  const [wallbooks, setWallbooks] = useState([]);
+  const [wallbooks, setWallbooks] = useState([
+    {
+      id: 1,
+      userId: 'user1',
+      text: 'Just finished reading an amazing book about quantum physics. The way it explains complex concepts is brilliant!',
+      author: 'AliceWonder',
+      timestamp: new Date(),
+    },
+    {
+      id: 2,
+      userId: 'user2',
+      text: 'Coffee tastes better when you code at 3 AM. Change my mind.',
+      author: 'DevNinja',
+      timestamp: new Date(Date.now() - 3600000),
+    },
+    {
+      id: 3,
+      userId: 'user3',
+      text: 'Exploring new hiking trails this weekend. Nature is the best therapy.',
+      author: 'MountainLover',
+      timestamp: new Date(Date.now() - 7200000),
+    },
+    {
+      id: 4,
+      userId: 'user4',
+      text: 'Finally deployed my first full-stack app! The feeling is incredible.',
+      author: 'CodeNewbie',
+      timestamp: new Date(Date.now() - 10800000),
+    },
+  ]);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(8);
   const [isMobile, setIsMobile] = useState(false);
   const containerRef = useRef(null);
 
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const feedData = useSelector((state) => state.Iliana?.feed);
-
-  // Determine items per page based on screen size
   useEffect(() => {
     const updateItemsPerPage = () => {
       const width = window.innerWidth;
@@ -390,67 +393,21 @@ const HomePage = () => {
 
   useEffect(() => setCurrentPage(1), [wallbooks.length]);
 
-  useEffect(() => {
-    const token = localStorage.getItem('auth');
-    setIsAuthenticated(!!token);
-  }, []);
-
   const handleAuthClick = useCallback(() => {
-    const token = localStorage.getItem('auth');
-    if (token) {
-      localStorage.removeItem('auth');
-      localStorage.removeItem('user');
-      localStorage.removeItem('noob');
-      setIsAuthenticated(false);
-      navigate('/login');
-    } else {
-      navigate('/login');
-    }
-  }, [navigate]);
+    setIsAuthenticated(!isAuthenticated);
+  }, [isAuthenticated]);
 
-  useEffect(() => {
-    dispatch(thought());
-  }, [dispatch]);
-
-  useEffect(() => {
-    if (feedData?.thoughts?.length > 0) {
-      const mappedWallbooks = feedData.thoughts.map((item) => ({
-        id: item._id,
-        userId: item.userId,
-        text: item.content,
-        author: item.userId?.username || 'Anonymous',
-        timestamp: new Date(item.createdAt),
-      }));
-      setWallbooks(mappedWallbooks);
-      setIsLoading(false);
-    } else if (feedData && feedData.thoughts?.length === 0) {
-      setIsLoading(false);
-    }
-  }, [feedData]);
-
-  const handleCreateWallbook = useCallback(
-    async (data) => {
-      const token = localStorage.getItem('auth');
-      if (!token) {
-        alert('Please login to post a thought');
-        return;
-      }
-      try {
-        const result = await dispatch(
-          createThought({ token, content: data.text })
-        );
-        if (createThought.fulfilled.match(result)) {
-          setShowCreateModal(false);
-          await dispatch(thought());
-        } else {
-          alert('Failed to post thought. Please try again.');
-        }
-      } catch (error) {
-        alert('An error occurred while posting.');
-      }
-    },
-    [dispatch]
-  );
+  const handleCreateWallbook = useCallback(async (data) => {
+    const newWallbook = {
+      id: Date.now(),
+      userId: 'currentUser',
+      text: data.text,
+      author: 'You',
+      timestamp: new Date(),
+    };
+    setWallbooks((prev) => [newWallbook, ...prev]);
+    setShowCreateModal(false);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 relative overflow-hidden">
@@ -509,11 +466,7 @@ const HomePage = () => {
             animate={{ opacity: 1 }}
             className="flex items-center justify-center min-h-[80vh]"
           >
-            <img
-              src={chica}
-              alt="Loading"
-              className="max-w-xs md:max-w-md object-contain"
-            />
+            <div className="text-white text-xl">Loading...</div>
           </motion.div>
         ) : wallbooks.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[80vh]">
