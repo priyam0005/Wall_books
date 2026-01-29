@@ -20,6 +20,8 @@ import {
   AlertCircle,
 } from 'lucide-react';
 
+import { Helmet } from 'react-helmet-async';
+
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { thought } from '../store/thoughts/getThought';
@@ -456,6 +458,39 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 relative overflow-hidden">
+      <Helmet>
+        <title>Wallbooks - Share Your Thoughts</title>
+        <meta
+          name="description"
+          content="Share your thoughts and connect with people around the world on Wallbooks - a social platform for expressing yourself."
+        />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="Wallbooks - Share Your Thoughts" />
+        <meta
+          property="og:description"
+          content="Share your thoughts and connect with people around the world on Wallbooks."
+        />
+        <meta
+          property="og:image"
+          content="https://yourwebsite.com/wallbooks-preview.jpg"
+        />
+        <meta property="og:url" content="https://yourwebsite.com" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Wallbooks - Share Your Thoughts" />
+        <meta
+          name="twitter:description"
+          content="Share your thoughts and connect with people around the world on Wallbooks."
+        />
+        <meta
+          name="twitter:image"
+          content="https://yourwebsite.com/wallbooks-preview.jpg"
+        />
+      </Helmet>
+
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-20 left-20 w-72 h-72 bg-purple-600/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl"></div>
