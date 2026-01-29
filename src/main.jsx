@@ -22,6 +22,8 @@ import MessagingInterface from './othercomps/message.jsx';
 import ProfileUpdateForm from './othercomps/ProfileUpdate.jsx';
 import UserSearchResults from './othercomps/search.jsx';
 
+import { HelmetProvider } from 'react-helmet-async';
+
 import Friendlist from './othercomps/FriendList.jsx';
 
 import Privatechat from './othercomps/message.jsx';
@@ -125,8 +127,10 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <Provider store={store}>
-      <RouterProvider router={router} />
-    </Provider>
+    <HelmetProvider>
+      <Provider store={store}>
+        <RouterProvider router={router} />
+      </Provider>
+    </HelmetProvider>
   </StrictMode>
 );
