@@ -22,8 +22,6 @@ import MessagingInterface from './othercomps/message.jsx';
 import ProfileUpdateForm from './othercomps/ProfileUpdate.jsx';
 import UserSearchResults from './othercomps/search.jsx';
 
-import { HelmetProvider } from 'react-helmet-async';
-
 import Friendlist from './othercomps/FriendList.jsx';
 
 import Privatechat from './othercomps/message.jsx';
