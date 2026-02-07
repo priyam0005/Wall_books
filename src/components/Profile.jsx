@@ -537,7 +537,7 @@ export default function GenZProfileImproved() {
       </header>
 
       {/* Main Profile Section */}
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="max-w-4xl mt-16 mx-auto px-4">
         {/* Profile Card */}
         <div className="bg-gradient-to-br from-gray-900/90 via-black/90 to-gray-800/90 backdrop-blur-sm rounded-xl p-4 md:p-6 mb-6 border border-gray-800/50">
           <div className="flex flex-col sm:flex-row gap-4 md:gap-6">
