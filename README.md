@@ -173,13 +173,11 @@ Wall_books/
 ## 🖼️ Screenshots
 
 ### Home Wall
-![Home Wall](screenshots/home.png)
+![Home Wall](https://ibb.co/0Wwdnb5)
 
 ### User Profile
-![Profile](screenshots/profile.png)
+![Profile](https://ibb.co/ccqGF4Vp)
 
-### Explore Page
-![Explore](screenshots/explore.png)
 
 ---
 
