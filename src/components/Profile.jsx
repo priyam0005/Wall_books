@@ -16,6 +16,8 @@ import {
   Edit2,
   Trash2,
   X,
+  LogIn,
+  LogOut,
 } from 'lucide-react';
 import { getUserThoughts } from '../store/thoughts/mythought';
 import { motion, AnimatePresence } from 'framer-motion';
