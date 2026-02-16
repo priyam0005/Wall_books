@@ -5,48 +5,37 @@ import { connected } from '../store/userProfile/connect';
 import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import { Friends } from '../store/Friends/newFriend';
-import { BookOpen, Users, Headphones, Loader2 } from 'lucide-react';
+import { BookOpen, Users, Loader2, ArrowLeft } from 'lucide-react';
 import { friends } from '../store/Friends/friends';
 import { ShowProfile } from '../store/userProfile/getProfile';
 import { getUserThoughts } from '../store/thoughts/mythought';
 
-const mockProfile = {
-  status: 'Currently listening to Lo-Fi beats 🎵',
-  currentlyPlaying: {
-    song: 'Midnight City',
-    artist: 'M83',
-    platform: 'Spotify',
-  },
-};
-
 // Loading Component
 const ProfileLoader = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white flex items-center justify-center">
+    <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
       <div className="text-center space-y-6">
         <div className="relative">
-          <Loader2 className="w-16 h-16 text-blue-500 animate-spin mx-auto" />
-          <div className="absolute inset-0 bg-blue-500/20 blur-2xl animate-pulse"></div>
+          <Loader2 className="w-16 h-16 text-purple-500 animate-spin mx-auto" />
+          <div className="absolute inset-0 bg-purple-500/20 blur-2xl animate-pulse"></div>
         </div>
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-            Loading Profile
-          </h2>
+          <h2 className="text-2xl font-bold text-white">Loading Profile</h2>
           <p className="text-gray-400 text-sm">
             Please wait while we fetch the data...
           </p>
         </div>
         <div className="flex items-center justify-center gap-2">
           <div
-            className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"
+            className="w-3 h-3 bg-purple-500 rounded-full animate-bounce"
             style={{ animationDelay: '0s' }}
           ></div>
           <div
-            className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"
+            className="w-3 h-3 bg-purple-500 rounded-full animate-bounce"
             style={{ animationDelay: '0.2s' }}
           ></div>
           <div
-            className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"
+            className="w-3 h-3 bg-purple-500 rounded-full animate-bounce"
             style={{ animationDelay: '0.4s' }}
           ></div>
         </div>
@@ -64,14 +53,14 @@ const ProfileLoader = () => {
   );
 };
 
-export default function GenZProfileImproved() {
+export default function UserProfile() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('about');
   const [showAllFriends, setShowAllFriends] = useState(false);
   const [connecting, setConnecting] = useState(false);
-  const [requestSent, setRequestSent] = useState(false); // Track if request was sent
+  const [requestSent, setRequestSent] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [wallbooks, setWallbooks] = useState([]);
   const [wallbooksLoading, setWallbooksLoading] = useState(true);
@@ -132,7 +121,6 @@ export default function GenZProfileImproved() {
   };
 
   const handleClick = async () => {
-    // Prevent multiple clicks if request already sent
     if (requestSent || connecting) {
       return;
     }
@@ -144,7 +132,7 @@ export default function GenZProfileImproved() {
       const result = await dispatch(connected({ token, Reciever_Id }));
 
       if (connected.fulfilled.match(result)) {
-        setRequestSent(true); // Mark request as sent
+        setRequestSent(true);
         toast.success('Request sent successfully');
       } else {
         toast.error('Failed to send request');
@@ -167,6 +155,10 @@ export default function GenZProfileImproved() {
 
   const ours = async (e) => {
     setWallbookColor(e);
+  };
+
+  const handleBack = () => {
+    navigate(-1); // Go back to previous page
   };
 
   useEffect(() => {
@@ -206,8 +198,7 @@ export default function GenZProfileImproved() {
   }
 
   return (
-    <div className="min-h-screen space-y-5 bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white">
-      {/* Move Toaster outside conditional rendering */}
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white py-6">
       <Toaster
         position="top-center"
         reverseOrder={false}
@@ -270,266 +261,279 @@ export default function GenZProfileImproved() {
         }}
       />
 
-      <div className="flex items-center justify-center h-24 bg-gradient-to-br from-black via-gray-900 to-black">
-        <h2 className="text-4xl font-bold bg-gradient-to-r from-gray-100 via-gray-300 to-gray-600 bg-clip-text text-transparent drop-shadow-2xl relative">
-          Welcome To SocialNet
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-blue-500/20 blur-2xl animate-pulse -z-10"></div>
-        </h2>
-      </div>
+      {/* Header - matching main profile */}
+      <header className="fixed top-0 left-0 right-0 z-50 p-3 md:p-4 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800/50">
+        <nav className="flex justify-between items-center max-w-7xl mx-auto">
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handleBack}
+              className="p-2 hover:bg-gray-800 rounded-lg transition-colors mr-2"
+              title="Go back"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-400 hover:text-white" />
+            </button>
+            <BookOpen className="text-purple-400 w-6 h-6 md:w-7 md:h-7" />
+            <h1 className="text-lg md:text-xl font-bold text-white">
+              Wallbooks
+            </h1>
+          </div>
+        </nav>
+      </header>
 
-      <div className="max-w-5xl mx-auto px-1 rounded-3xl relative z-10">
-        <div className="flex flex-col lg:flex-col gap-6">
-          <div className="w-full rounded-xl flex justify-between">
-            <div className="bg-gradient-to-br from-gray-900 via-black to-gray-800 rounded-lg flex flex-col md:flex-row md:space-x-8 p-4 md:p-6 mb-4 w-full">
-              <div className="relative mb-6 flex-shrink-0 mx-auto md:mx-0">
-                <img
-                  src={users.profilePic}
-                  alt={users.name}
-                  className="w-48 h-48 md:w-64 md:h-64 rounded-2xl object-cover shadow-lg"
-                />
-              </div>
+      {/* Main Profile Section */}
+      <div className="max-w-4xl mt-16 mx-auto px-4">
+        {/* Profile Card */}
+        <div className="bg-gradient-to-br from-gray-900/90 via-black/90 to-gray-800/90 backdrop-blur-sm rounded-xl p-4 md:p-6 mb-6 border border-gray-800/50 shadow-2xl">
+          <div className="flex flex-col sm:flex-row gap-4 md:gap-6">
+            {/* Avatar */}
+            <div className="relative flex-shrink-0 mx-auto sm:mx-0">
+              <img
+                src={users.profilePic}
+                alt={users.displayName}
+                className="w-32 h-32 md:w-40 md:h-40 rounded-2xl object-cover shadow-xl border-2 border-gray-700/50"
+              />
+            </div>
 
-              <div className="flex flex-col space-y-3 flex-1">
-                <div className="flex items-center gap-2 mb-2 justify-center md:justify-start">
-                  <h1 className="text-xl font-serif md:text-2xl text-fuchsia-400 font-bold">
-                    {users.displayName}
-                  </h1>
-                </div>
-                <p className="text-[#888888] text-sm font-mono md:text-left">
+            {/* Profile Info */}
+            <div className="flex flex-col justify-center flex-1 text-center sm:text-left space-y-3">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-purple-500 mb-1">
+                  {users.displayName}
+                </h1>
+                <p className="text-gray-400 text-sm">
                   @{users.userId.username}
                 </p>
-
-                <p className="text-base md:text-lg text-bold text-green leading-relaxed md:text-left">
-                  {users.bio}
-                </p>
-
-                <div className="p-3 bg-[#0a0a0a]">
-                  <p className="text-sm text-[#cccccc]">{mockProfile.status}</p>
-                </div>
-
-                <div className="flex flex-col space-y-4 mt-6">
-                  <button
-                    onClick={handleClick}
-                    disabled={connecting || requestSent}
-                    className={`w-full rounded-3xl py-3 text-white font-semibold transition shadow-lg ${
-                      connecting || requestSent
-                        ? 'bg-gray-600 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 shadow-green-500/30'
-                    }`}
-                  >
-                    {connecting ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Connecting...
-                      </span>
-                    ) : requestSent ? (
-                      'Request Sent ✓'
-                    ) : (
-                      'Connect'
-                    )}
-                  </button>
-
-                  <button
-                    onClick={handleMessage}
-                    className="w-full py-3 rounded-2xl border border-[#3b82f6] text-[#3b82f6] hover:bg-[#3b82f6] hover:text-white font-medium transition text-sm md:text-base"
-                  >
-                    Message
-                  </button>
-                </div>
               </div>
-            </div>
-          </div>
 
-          <div className="w-full">
-            <div className="bg-[#111111] rounded-lg mb-6">
-              <div className="flex">
-                {['about', 'friends'].map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`px-8 py-4 text-sm font-semibold capitalize border-b-2 transition flex-1 ${
-                      activeTab === tab
-                        ? 'border-[#3b82f6] text-[#3b82f6]'
-                        : 'border-transparent text-[#888888] hover:text-white'
-                    }`}
-                  >
-                    {tab === 'friends' ? (
-                      <span className="flex items-center gap-2 justify-center">
-                        <Users className="w-4 h-4" />
-                        Friends ({User?.length || 0})
-                      </span>
-                    ) : (
-                      tab
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {activeTab === 'about' && (
-              <div className="space-y-4">
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="w-5 h-5 text-[#1db954]" />
-                      <h3 className="text-lg font-semibold">Wallbooks</h3>
-                      <span className="text-sm text-[#888888]">
-                        ({wallbooks?.length || 0})
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-[#888888]">Theme:</span>
-                      <div className="flex gap-2">
-                        {[
-                          { name: 'green', color: '#1db954' },
-                          { name: 'blue', color: '#3b82f6' },
-                          { name: 'purple', color: '#a855f7' },
-                          { name: 'orange', color: '#f97316' },
-                          { name: 'pink', color: '#ec4899' },
-                        ].map((theme) => (
-                          <button
-                            key={theme.name}
-                            onClick={() => ours(theme.color)}
-                            className={`w-6 h-6 rounded-full transition-all ${
-                              wallbookColor === theme.color
-                                ? 'ring-2 ring-offset-2 ring-offset-[#121212] ring-white scale-110'
-                                : 'hover:scale-105'
-                            }`}
-                            style={{ backgroundColor: theme.color }}
-                            title={theme.name}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {wallbooksLoading ? (
-                      <div className="col-span-2 text-center py-8 text-[#888888]">
-                        Loading thoughts...
-                      </div>
-                    ) : wallbooks && wallbooks.length > 0 ? (
-                      wallbooks.map((wallbook, index) => (
-                        <div
-                          key={wallbook._id || index}
-                          className="p-4 rounded-lg border-l-4 hover:shadow-lg transition-all duration-300 cursor-pointer group"
-                          style={{
-                            background: `linear-gradient(to bottom right, ${wallbookColor}1A, ${wallbookColor}0D)`,
-                            borderLeftColor: wallbookColor,
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = `linear-gradient(to bottom right, ${wallbookColor}26, ${wallbookColor}14)`;
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = `linear-gradient(to bottom right, ${wallbookColor}1A, ${wallbookColor}0D)`;
-                          }}
-                        >
-                          <div className="flex flex-col h-full">
-                            <div
-                              className="text-2xl mb-3 opacity-50 group-hover:opacity-70 transition-opacity"
-                              style={{ color: wallbookColor }}
-                            >
-                              "
-                            </div>
-                            <p className="text-sm leading-relaxed mb-3 flex-grow">
-                              {wallbook.content}
-                            </p>
-                            <div className="flex items-center justify-between mt-auto pt-3 border-t border-[#888888]/20">
-                              <span
-                                className="text-xs font-medium"
-                                style={{ color: wallbookColor }}
-                              >
-                                {wallbook.username || 'Anonymous'}
-                              </span>
-                              <span className="text-xs text-[#888888]">
-                                {wallbook.createdAt
-                                  ? new Date(
-                                      wallbook.createdAt
-                                    ).toLocaleDateString()
-                                  : ''}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="col-span-2 text-center py-8 text-[#888888]">
-                        No thoughts yet. Start sharing your thoughts!
-                      </div>
-                    )}
-                  </div>
+              {/* Bio */}
+              {users.bio && (
+                <div className="p-3 bg-gradient-to-r from-gray-800/50 to-gray-900/50 rounded-lg border border-gray-700/30">
+                  <p className="text-sm md:text-base text-gray-200 leading-relaxed">
+                    {users.bio}
+                  </p>
                 </div>
-              </div>
-            )}
+              )}
 
-            {activeTab === 'friends' && (
-              <div className="bg-[#111111] rounded-md p-4">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <Users className="w-5 h-5" />
-                    Friends ({User?.length || 0})
-                  </h3>
-                  {User?.length > 8 && (
-                    <button
-                      onClick={() => setShowAllFriends(!showAllFriends)}
-                      className="text-sm text-[#3b82f6] hover:text-[#2563eb]"
-                    >
-                      {showAllFriends ? 'Show Less' : 'View All'}
-                    </button>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {User && User.length > 0 ? (
-                    User.map((friend) => (
-                      <div key={friend.userId}>
-                        <div className="flex flex-col items-center gap-3 group cursor-pointer">
-                          <div
-                            className="relative"
-                            onClick={() => handlecclick(friend.userId)}
-                          >
-                            <img
-                              src={friend?.profilePic}
-                              alt={friend?.displayName}
-                              className="w-32 h-32 rounded-xl object-cover border-2 border-[#333333] group-hover:border-blue-500 group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-blue-500/20 transition-all duration-300"
-                            />
-                            <div
-                              className={`absolute -bottom-1 -right-1 w-4 h-4 ${getStatusColor(
-                                'online'
-                              )} border-2 border-[#0a0a0a] rounded-full transition-transform group-hover:scale-110`}
-                            />
-                          </div>
-                          <div className="text-center">
-                            <div className="text-sm font-semibold text-white group-hover:text-blue-400 transition-colors duration-300">
-                              {friend?.displayName}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                <button
+                  onClick={handleClick}
+                  disabled={connecting || requestSent}
+                  className={`flex-1 rounded-xl py-3 text-white font-semibold transition shadow-lg ${
+                    connecting || requestSent
+                      ? 'bg-gray-600 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 shadow-green-500/30'
+                  }`}
+                >
+                  {connecting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Connecting...
+                    </span>
+                  ) : requestSent ? (
+                    'Request Sent ✓'
                   ) : (
-                    <div className="col-span-4 text-center py-8 text-[#888888]">
-                      No friends yet
-                    </div>
+                    'Connect'
                   )}
-                </div>
+                </button>
+
+                <button
+                  onClick={handleMessage}
+                  className="flex-1 py-3 rounded-xl border-2 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white font-semibold transition shadow-lg hover:shadow-blue-500/30"
+                >
+                  Message
+                </button>
               </div>
-            )}
+            </div>
           </div>
         </div>
+
+        {/* Navigation Tabs */}
+        <div className="bg-gray-900/80 backdrop-blur-sm rounded-xl mb-6 border border-gray-800/50 overflow-hidden">
+          <div className="flex">
+            {['about', 'friends'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-6 py-3 text-sm font-semibold capitalize border-b-2 transition flex-1 ${
+                  activeTab === tab
+                    ? 'border-[#3b82f6] text-[#3b82f6] bg-[#3b82f6]/10'
+                    : 'border-transparent text-gray-400 hover:text-white hover:bg-gray-800/50'
+                }`}
+              >
+                {tab === 'friends' ? (
+                  <span className="flex items-center gap-2 justify-center">
+                    <Users className="w-4 h-4" />
+                    Friends ({User?.length || 0})
+                  </span>
+                ) : (
+                  tab
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'about' && (
+          <div className="space-y-4">
+            {/* Wallbooks Section */}
+            <div className="bg-gray-900/80 backdrop-blur-sm rounded-xl p-4 md:p-6 border border-gray-800/50">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-[#1db954]" />
+                  <h3 className="text-lg font-semibold">Wallbooks</h3>
+                  <span className="text-sm text-gray-400">
+                    ({wallbooks?.length || 0})
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400 hidden sm:inline">
+                    Theme:
+                  </span>
+                  <div className="flex gap-1.5">
+                    {[
+                      { name: 'green', color: '#1db954' },
+                      { name: 'blue', color: '#3b82f6' },
+                      { name: 'purple', color: '#a855f7' },
+                      { name: 'orange', color: '#f97316' },
+                      { name: 'pink', color: '#ec4899' },
+                    ].map((theme) => (
+                      <button
+                        key={theme.name}
+                        onClick={() => ours(theme.color)}
+                        className={`w-5 h-5 md:w-6 md:h-6 rounded-full transition-all ${
+                          wallbookColor === theme.color
+                            ? 'ring-2 ring-offset-2 ring-offset-black ring-white scale-110'
+                            : 'hover:scale-105'
+                        }`}
+                        style={{ backgroundColor: theme.color }}
+                        title={theme.name}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                {wallbooksLoading ? (
+                  <div className="col-span-2 text-center py-8 text-gray-400">
+                    Loading thoughts...
+                  </div>
+                ) : wallbooks && wallbooks.length > 0 ? (
+                  wallbooks.map((wallbook, index) => (
+                    <div
+                      key={wallbook._id || index}
+                      className="p-4 rounded-lg border-l-4 hover:shadow-lg transition-all duration-300 cursor-pointer group"
+                      style={{
+                        background: `linear-gradient(to bottom right, ${wallbookColor}1A, ${wallbookColor}0D)`,
+                        borderLeftColor: wallbookColor,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = `linear-gradient(to bottom right, ${wallbookColor}26, ${wallbookColor}14)`;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = `linear-gradient(to bottom right, ${wallbookColor}1A, ${wallbookColor}0D)`;
+                      }}
+                    >
+                      <div className="flex flex-col h-full">
+                        <div
+                          className="text-2xl mb-2 opacity-50 group-hover:opacity-70 transition-opacity"
+                          style={{ color: wallbookColor }}
+                        >
+                          "
+                        </div>
+                        <p className="text-sm leading-relaxed mb-3 flex-grow text-gray-200">
+                          {wallbook.content}
+                        </p>
+                        <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-700/30">
+                          <span
+                            className="text-xs font-medium"
+                            style={{ color: wallbookColor }}
+                          >
+                            {wallbook.username || 'Anonymous'}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            {wallbook.createdAt
+                              ? new Date(
+                                  wallbook.createdAt
+                                ).toLocaleDateString()
+                              : ''}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-2 text-center py-8 text-gray-400">
+                    No thoughts yet. Start sharing your thoughts!
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'friends' && (
+          <div className="bg-gray-900/80 backdrop-blur-sm rounded-xl p-4 md:p-6 border border-gray-800/50">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Friends ({User?.length || 0})
+              </h3>
+              {User?.length > 8 && (
+                <button
+                  onClick={() => setShowAllFriends(!showAllFriends)}
+                  className="text-sm text-[#3b82f6] hover:text-[#2563eb] transition-colors"
+                >
+                  {showAllFriends ? 'Show Less' : 'View All'}
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 md:gap-4">
+              {User && User.length > 0 ? (
+                (showAllFriends ? User : User.slice(0, 8)).map((friend) => (
+                  <div
+                    key={friend.userId}
+                    className="flex flex-col items-center gap-2 group cursor-pointer"
+                    onClick={() => handlecclick(friend.userId)}
+                  >
+                    <div className="relative">
+                      <img
+                        src={friend?.profilePic}
+                        alt={friend?.displayName}
+                        className="w-20 h-20 md:w-24 md:h-24 rounded-xl object-cover border-2 border-gray-700 group-hover:border-blue-500 group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-blue-500/20 transition-all duration-300"
+                      />
+                      <div
+                        className={`absolute -bottom-1 -right-1 w-3 h-3 ${getStatusColor(
+                          'online'
+                        )} border-2 border-black rounded-full transition-transform group-hover:scale-110`}
+                      />
+                    </div>
+                    <div className="text-center">
+                      <div className="text-sm font-medium text-white group-hover:text-blue-400 transition-colors duration-300 line-clamp-1">
+                        {friend?.displayName}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-4 text-center py-8 text-gray-400">
+                  No friends yet
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      <footer className="footer sm:footer-horizontal footer-center bg-base-300 text-base-content p-4 mb-0 self-center">
-        <aside>
-          <div className="mb-2 text-center">
-            <p className="text-md mb-2">
-              Designed and Managed by
-              <span className="text-md font-bold text-fuchsia-500 ml-2">
-                PRIYAM PATHAK
-              </span>
-            </p>
-          </div>
-        </aside>
+      {/* Footer */}
+      <footer className="mt-12 text-center py-4 border-t border-gray-800/50">
+        <p className="text-sm text-gray-400">
+          Designed and Managed by{' '}
+          <span className="font-bold text-fuchsia-500">PRIYAM PATHAK</span>
+        </p>
       </footer>
     </div>
   );
