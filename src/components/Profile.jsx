@@ -18,6 +18,7 @@ import {
   X,
   LogIn,
   LogOut,
+  Loader2,
 } from 'lucide-react';
 import { getUserThoughts } from '../store/thoughts/mythought';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -164,7 +165,10 @@ const WallbookCard = React.memo(
     }, [showMenu]);
 
     return (
-      <div
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: index * 0.05 }}
         key={wallbook._id || index}
         className="p-4 rounded-lg border-l-4 hover:shadow-lg transition-all duration-300 cursor-pointer group relative"
         style={{
@@ -250,12 +254,30 @@ const WallbookCard = React.memo(
             </span>
           </div>
         </div>
-      </div>
+      </motion.div>
     );
   }
 );
 
 WallbookCard.displayName = 'WallbookCard';
+
+// Loading Skeleton for Wallbooks
+const WallbookSkeleton = () => (
+  <div className="p-4 rounded-lg border-l-4 border-gray-700 bg-gray-800/30 animate-pulse">
+    <div className="flex flex-col h-full space-y-3">
+      <div className="h-6 bg-gray-700/50 rounded w-8"></div>
+      <div className="space-y-2">
+        <div className="h-4 bg-gray-700/50 rounded w-full"></div>
+        <div className="h-4 bg-gray-700/50 rounded w-5/6"></div>
+        <div className="h-4 bg-gray-700/50 rounded w-4/6"></div>
+      </div>
+      <div className="flex items-center justify-between pt-3 border-t border-gray-700/30">
+        <div className="h-3 bg-gray-700/50 rounded w-20"></div>
+        <div className="h-3 bg-gray-700/50 rounded w-16"></div>
+      </div>
+    </div>
+  </div>
+);
 
 export default function GenZProfileImproved() {
   const [activeTab, setActiveTab] = useState('about');
@@ -268,9 +290,10 @@ export default function GenZProfileImproved() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const color = localStorage.getItem('color');
-  const [wallbooks, setWallbooks] = useState([]);
   const [wallbooksLoading, setWallbooksLoading] = useState(true);
   const [wallbookColor, setWallbookColor] = useState(color || '#1db954');
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [friendsLoading, setFriendsLoading] = useState(true);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -287,77 +310,67 @@ export default function GenZProfileImproved() {
 
   const token = localStorage.getItem('auth');
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
 
   const edit = () => {
     navigate('/updateProfile');
   };
 
-  const [state, setState] = useState(false);
   const { list } = useSelector((state) => state.dost);
-
   const Na = JSON.parse(localStorage.getItem('user'));
   const userId = Na._id;
-
   const mylove = useSelector((state) => state.Mi?.thoughts || []);
-  console.log(mylove);
+  const MyProfile = JSON.parse(localStorage.getItem('noob'));
 
-  const Iliana = async () => {
+  // Load thoughts immediately on mount
+  const loadThoughts = useCallback(async () => {
     setWallbooksLoading(true);
     try {
       const result = await dispatch(getUserThoughts({ userId, token }));
-
       if (getUserThoughts.fulfilled.match(result)) {
         console.log('Thoughts fetched successfully:', result.payload);
-        setWallbooksLoading(false);
-      } else if (getUserThoughts.rejected.match(result)) {
-        console.log('Error fetching thoughts');
-        setWallbooksLoading(false);
       }
     } catch (error) {
-      console.log('Error in Iliana:', error);
+      console.log('Error loading thoughts:', error);
+    } finally {
       setWallbooksLoading(false);
     }
-  };
+  }, [dispatch, userId, token]);
 
-  const yours = async () => {
+  const loadFriends = useCallback(async () => {
+    setFriendsLoading(true);
     try {
       const resultAction = await dispatch(friends({ token }));
-
       if (friends.fulfilled.match(resultAction)) {
-        setLoading(false);
-        console.log('we got the friend list');
-      } else if (friends.pending.match(resultAction)) {
-        console.log('wait working on it.....');
-        setLoading(true);
-      } else if (friends.rejected.match(resultAction)) {
-        setLoading(false);
-        console.log('there is some error kindly check it out ');
+        console.log('Friends list loaded');
       }
     } catch (error) {
       console.log(error);
+    } finally {
+      setFriendsLoading(false);
     }
-  };
+  }, [dispatch, token]);
 
-  const mine = async () => {
+  const loadProfile = useCallback(async () => {
+    setProfileLoading(true);
     try {
       const result = await dispatch(userProfile({ token }));
       if (userProfile.fulfilled.match(result)) {
-        setLoading(false);
-        setState(true);
-        console.log('the request got sent');
-      } else if (userProfile.pending.match(result)) {
-        setLoading(true);
-      } else if (userProfile.rejected.match(result)) {
-        console.log('the request got rejected');
-        setLoading(false);
+        console.log('Profile loaded');
       }
-      setLoading(false);
     } catch (error) {
-      setLoading(false);
       console.log(error);
+    } finally {
+      setProfileLoading(false);
     }
-  };
+  }, [dispatch, token]);
+
+  // Load all data in parallel on mount
+  useEffect(() => {
+    const initializeProfile = async () => {
+      await Promise.all([loadProfile(), loadFriends(), loadThoughts()]);
+    };
+    initializeProfile();
+  }, [loadProfile, loadFriends, loadThoughts]);
 
   const ours = async (e) => {
     console.log(e);
@@ -392,7 +405,6 @@ export default function GenZProfileImproved() {
       }
 
       try {
-        // Dispatch the updateThought action with correct parameters
         const resultAction = await dispatch(
           updateThought({
             thoughtId: id,
@@ -403,8 +415,7 @@ export default function GenZProfileImproved() {
 
         if (updateThought.fulfilled.match(resultAction)) {
           console.log('Wallbook updated successfully');
-          // Refresh the thoughts
-          await Iliana();
+          await loadThoughts();
           setShowEditModal(false);
           setSelectedWallbook(null);
         } else if (updateThought.rejected.match(resultAction)) {
@@ -415,7 +426,7 @@ export default function GenZProfileImproved() {
         alert('An error occurred while updating.');
       }
     },
-    [dispatch]
+    [dispatch, loadThoughts]
   );
 
   const handleDeleteConfirm = useCallback(async () => {
@@ -428,7 +439,6 @@ export default function GenZProfileImproved() {
 
     setIsDeleting(true);
     try {
-      // Dispatch the deleteThought action with correct parameters
       const resultAction = await dispatch(
         deleteThought({
           token,
@@ -438,8 +448,7 @@ export default function GenZProfileImproved() {
 
       if (deleteThought.fulfilled.match(resultAction)) {
         console.log('Wallbook deleted successfully');
-        // Refresh the thoughts
-        await Iliana();
+        await loadThoughts();
         setShowDeleteModal(false);
         setSelectedWallbook(null);
       } else if (deleteThought.rejected.match(resultAction)) {
@@ -451,19 +460,7 @@ export default function GenZProfileImproved() {
     } finally {
       setIsDeleting(false);
     }
-  }, [dispatch, selectedWallbook]);
-
-  const MyProfile = JSON.parse(localStorage.getItem('noob'));
-
-  useEffect(() => {
-    const fetchData = async () => {
-      await mine();
-      await yours();
-      await Iliana();
-    };
-
-    fetchData();
-  }, []);
+  }, [dispatch, selectedWallbook, loadThoughts]);
 
   const handleAuthClick = useCallback(() => {
     const token = localStorage.getItem('auth');
@@ -478,18 +475,8 @@ export default function GenZProfileImproved() {
     }
   }, [navigate]);
 
-  useEffect(() => {
-    console.log('mylove value:', mylove);
-    if (mylove && Array.isArray(mylove) && mylove.length > 0) {
-      console.log('Setting wallbooks to:', mylove);
-      setWallbooks(mylove);
-      setWallbooksLoading(false);
-    } else {
-      setWallbooksLoading(false);
-    }
-  }, [mylove]);
-
-  if (loading) {
+  // Show loading page only if profile is loading
+  if (profileLoading) {
     return <LoadingPage />;
   }
 
@@ -539,18 +526,26 @@ export default function GenZProfileImproved() {
       {/* Main Profile Section */}
       <div className="max-w-4xl mt-16 mx-auto px-4">
         {/* Profile Card */}
-        <div className="bg-gradient-to-br from-gray-900/90 via-black/90 to-gray-800/90 backdrop-blur-sm rounded-xl p-4 md:p-6 mb-6 border border-gray-800/50">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="bg-gradient-to-br from-gray-900/90 via-black/90 to-gray-800/90 backdrop-blur-sm rounded-xl p-4 md:p-6 mb-6 border border-gray-800/50 shadow-2xl"
+        >
           <div className="flex flex-col sm:flex-row gap-4 md:gap-6">
             {/* Avatar */}
             <div className="relative flex-shrink-0 mx-auto sm:mx-0">
-              <img
+              <motion.img
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5 }}
                 src={MyProfile?.profilePic}
                 alt="profile pic"
                 className="w-32 h-32 md:w-40 md:h-40 rounded-2xl object-cover shadow-xl border-2 border-gray-700/50"
               />
               <button
                 onClick={edit}
-                className="absolute bottom-2 right-2 p-2 bg-[#3b82f6] hover:bg-[#2563eb] transition rounded-full shadow-lg"
+                className="absolute bottom-2 right-2 p-2 bg-[#3b82f6] hover:bg-[#2563eb] transition rounded-full shadow-lg hover:scale-110 duration-200"
               >
                 <Edit3 className="w-4 h-4" />
               </button>
@@ -559,28 +554,48 @@ export default function GenZProfileImproved() {
             {/* Profile Info */}
             <div className="flex flex-col justify-center flex-1 text-center sm:text-left space-y-3">
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-purple-500 mb-1">
+                <motion.h1
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-purple-500 mb-1"
+                >
                   {MyProfile?.displayName}
-                </h1>
-                <p className="text-gray-400 text-sm">
+                </motion.h1>
+                <motion.p
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-gray-400 text-sm"
+                >
                   @{MyProfile?.userId.username}
-                </p>
+                </motion.p>
               </div>
 
               {/* Bio */}
               {MyProfile?.bio && (
-                <div className="p-3 bg-gradient-to-r from-gray-800/50 to-gray-900/50 rounded-lg border border-gray-700/30">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="p-3 bg-gradient-to-r from-gray-800/50 to-gray-900/50 rounded-lg border border-gray-700/30"
+                >
                   <p className="text-sm md:text-base text-gray-200 leading-relaxed">
                     {MyProfile.bio}
                   </p>
-                </div>
+                </motion.div>
               )}
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Navigation Tabs */}
-        <div className="bg-gray-900/80 backdrop-blur-sm rounded-xl mb-6 border border-gray-800/50 overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-gray-900/80 backdrop-blur-sm rounded-xl mb-6 border border-gray-800/50 overflow-hidden"
+        >
           <div className="flex">
             {['about', 'friends'].map((tab) => (
               <button
@@ -603,132 +618,175 @@ export default function GenZProfileImproved() {
               </button>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* Tab Content */}
-        {activeTab === 'about' && (
-          <div className="space-y-4">
-            {/* Wallbooks Section */}
-            <div className="bg-gray-900/80 backdrop-blur-sm rounded-xl p-4 md:p-6 border border-gray-800/50">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-[#1db954]" />
-                  <h3 className="text-lg font-semibold">Wallbooks</h3>
-                  <span className="text-sm text-gray-400">
-                    ({wallbooks?.length || 0})
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400 hidden sm:inline">
-                    Theme:
-                  </span>
-                  <div className="flex gap-1.5">
-                    {[
-                      { name: 'green', color: '#1db954' },
-                      { name: 'blue', color: '#3b82f6' },
-                      { name: 'purple', color: '#a855f7' },
-                      { name: 'orange', color: '#f97316' },
-                      { name: 'pink', color: '#ec4899' },
-                    ].map((theme) => (
-                      <button
-                        key={theme.name}
-                        onClick={() => {
-                          setWallbookColor(theme.color);
-                          ours(theme.color);
-                        }}
-                        className={`w-5 h-5 md:w-6 md:h-6 rounded-full transition-all ${
-                          wallbookColor === theme.color
-                            ? 'ring-2 ring-offset-2 ring-offset-black ring-white scale-110'
-                            : 'hover:scale-105'
-                        }`}
-                        style={{ backgroundColor: theme.color }}
-                        title={theme.name}
-                      />
-                    ))}
+        <AnimatePresence mode="wait">
+          {activeTab === 'about' && (
+            <motion.div
+              key="about"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-4"
+            >
+              {/* Wallbooks Section */}
+              <div className="bg-gray-900/80 backdrop-blur-sm rounded-xl p-4 md:p-6 border border-gray-800/50">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-[#1db954]" />
+                    <h3 className="text-lg font-semibold">Wallbooks</h3>
+                    <span className="text-sm text-gray-400">
+                      ({mylove?.length || 0})
+                    </span>
                   </div>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                {wallbooksLoading ? (
-                  <div className="col-span-2 text-center py-8 text-gray-400">
-                    Loading thoughts...
-                  </div>
-                ) : wallbooks && wallbooks.length > 0 ? (
-                  wallbooks.map((wallbook, index) => (
-                    <WallbookCard
-                      key={wallbook._id || index}
-                      wallbook={wallbook}
-                      index={index}
-                      wallbookColor={wallbookColor}
-                      onEdit={handleEditClick}
-                      onDelete={handleDeleteClick}
-                    />
-                  ))
-                ) : (
-                  <div className="col-span-2 text-center py-8 text-gray-400">
-                    No thoughts yet. Start sharing your thoughts!
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'friends' && state === true && (
-          <div className="bg-gray-900/80 backdrop-blur-sm rounded-xl p-4 md:p-6 border border-gray-800/50">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                Friends ({list?.length || 0})
-              </h3>
-              {list && list.length > 8 && (
-                <button
-                  onClick={() => setShowAllFriends(!showAllFriends)}
-                  className="text-sm text-[#3b82f6] hover:text-[#2563eb] transition-colors"
-                >
-                  {showAllFriends ? 'Show Less' : 'View All'}
-                </button>
-              )}
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 md:gap-4">
-              {list && list.length > 0 ? (
-                (showAllFriends ? list : list.slice(0, 8)).map((friend) => (
-                  <div
-                    key={friend.userId}
-                    className="flex flex-col items-center gap-2 group cursor-pointer"
-                    onClick={() => handlecclick(friend.userId)}
-                  >
-                    <div className="relative">
-                      <img
-                        src={friend?.profilePic}
-                        alt={friend?.displayName}
-                        className="w-20 h-20 md:w-24 md:h-24 rounded-xl object-cover border-2 border-gray-700 group-hover:border-blue-500 group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-blue-500/20 transition-all duration-300"
-                      />
-                      <div
-                        className={`absolute -bottom-1 -right-1 w-3 h-3 ${getStatusColor(
-                          'online'
-                        )} border-2 border-black rounded-full transition-transform group-hover:scale-110`}
-                      />
-                    </div>
-                    <div className="text-center">
-                      <div className="text-sm font-medium text-white group-hover:text-blue-400 transition-colors duration-300 line-clamp-1">
-                        {friend?.displayName}
-                      </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400 hidden sm:inline">
+                      Theme:
+                    </span>
+                    <div className="flex gap-1.5">
+                      {[
+                        { name: 'green', color: '#1db954' },
+                        { name: 'blue', color: '#3b82f6' },
+                        { name: 'purple', color: '#a855f7' },
+                        { name: 'orange', color: '#f97316' },
+                        { name: 'pink', color: '#ec4899' },
+                      ].map((theme) => (
+                        <button
+                          key={theme.name}
+                          onClick={() => {
+                            setWallbookColor(theme.color);
+                            ours(theme.color);
+                          }}
+                          className={`w-5 h-5 md:w-6 md:h-6 rounded-full transition-all ${
+                            wallbookColor === theme.color
+                              ? 'ring-2 ring-offset-2 ring-offset-black ring-white scale-110'
+                              : 'hover:scale-105'
+                          }`}
+                          style={{ backgroundColor: theme.color }}
+                          title={theme.name}
+                        />
+                      ))}
                     </div>
                   </div>
-                ))
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                  {wallbooksLoading ? (
+                    // Show skeleton loaders
+                    <>
+                      <WallbookSkeleton />
+                      <WallbookSkeleton />
+                      <WallbookSkeleton />
+                      <WallbookSkeleton />
+                    </>
+                  ) : mylove && mylove.length > 0 ? (
+                    mylove.map((wallbook, index) => (
+                      <WallbookCard
+                        key={wallbook._id || index}
+                        wallbook={wallbook}
+                        index={index}
+                        wallbookColor={wallbookColor}
+                        onEdit={handleEditClick}
+                        onDelete={handleDeleteClick}
+                      />
+                    ))
+                  ) : (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="col-span-2 text-center py-12"
+                    >
+                      <BookOpen className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                      <p className="text-gray-400 text-lg">
+                        No thoughts yet. Start sharing your thoughts!
+                      </p>
+                    </motion.div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'friends' && (
+            <motion.div
+              key="friends"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="bg-gray-900/80 backdrop-blur-sm rounded-xl p-4 md:p-6 border border-gray-800/50"
+            >
+              {friendsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                </div>
               ) : (
-                <div className="col-span-4 text-center py-8 text-gray-400">
-                  No friends yet
-                </div>
+                <>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                      <Users className="w-5 h-5" />
+                      Friends ({list?.length || 0})
+                    </h3>
+                    {list && list.length > 8 && (
+                      <button
+                        onClick={() => setShowAllFriends(!showAllFriends)}
+                        className="text-sm text-[#3b82f6] hover:text-[#2563eb] transition-colors"
+                      >
+                        {showAllFriends ? 'Show Less' : 'View All'}
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 md:gap-4">
+                    {list && list.length > 0 ? (
+                      (showAllFriends ? list : list.slice(0, 8)).map(
+                        (friend, index) => (
+                          <motion.div
+                            key={friend.userId}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: index * 0.05 }}
+                            className="flex flex-col items-center gap-2 group cursor-pointer"
+                            onClick={() => handlecclick(friend.userId)}
+                          >
+                            <div className="relative">
+                              <img
+                                src={friend?.profilePic}
+                                alt={friend?.displayName}
+                                className="w-20 h-20 md:w-24 md:h-24 rounded-xl object-cover border-2 border-gray-700 group-hover:border-blue-500 group-hover:scale-105 group-hover:shadow-lg group-hover:shadow-blue-500/20 transition-all duration-300"
+                              />
+                              <div
+                                className={`absolute -bottom-1 -right-1 w-3 h-3 ${getStatusColor(
+                                  'online'
+                                )} border-2 border-black rounded-full transition-transform group-hover:scale-110`}
+                              />
+                            </div>
+                            <div className="text-center">
+                              <div className="text-sm font-medium text-white group-hover:text-blue-400 transition-colors duration-300 line-clamp-1">
+                                {friend?.displayName}
+                              </div>
+                            </div>
+                          </motion.div>
+                        )
+                      )
+                    ) : (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="col-span-4 text-center py-12"
+                      >
+                        <Users className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                        <p className="text-gray-400 text-lg">No friends yet</p>
+                      </motion.div>
+                    )}
+                  </div>
+                </>
               )}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'friends' && state === false && <LoadingPage />}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Footer */}
