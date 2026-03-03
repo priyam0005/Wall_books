@@ -308,10 +308,10 @@ export default function GenZProfileImproved() {
     }
   };
 
-  if (localStorage.getItem('auth')) {
-    console.log('we have the token');
-    setIsAuthenticated(true);
-  }
+  useEffect(() => {
+    const token = localStorage.getItem('auth');
+    setIsAuthenticated(!!token);
+  }, []);
 
   const token = localStorage.getItem('auth');
   const navigate = useNavigate();
