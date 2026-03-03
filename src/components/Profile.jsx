@@ -308,6 +308,11 @@ export default function GenZProfileImproved() {
     }
   };
 
+  if (localStorage.getItem('auth')) {
+    console.log('we have the token');
+    setIsAuthenticated(true);
+  }
+
   const token = localStorage.getItem('auth');
   const navigate = useNavigate();
 
