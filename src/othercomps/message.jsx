@@ -18,7 +18,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import mikugif from '../assets/anime-dance.gif';
 
-const SOCKET_URL = 'https://sc-net.onrender.com';
+const SOCKET_URL = import.meta.env.VITE_API_BASE;
 
 // ─── Poetic anonymous name generator ──────────────────────────────────────────
 const ADJECTIVES = [
