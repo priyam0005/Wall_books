@@ -20,8 +20,6 @@ import mikugif from '../assets/anime-dance.gif';
 
 const SOCKET_URL = import.meta.env.VITE_API_BASE;
 
-console.log(SOCKET_URL);
-
 // ─── Poetic anonymous name generator ──────────────────────────────────────────
 const ADJECTIVES = [
   'Weary',
