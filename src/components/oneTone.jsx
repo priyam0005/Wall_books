@@ -12,7 +12,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { io } from 'socket.io-client';
-import { Friends } from '../store/Friends/friends'; // ← ADJUST path if needed
+import { friends } from '../store/Friends/friends'; // ← ADJUST path if needed
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const BACKEND_URL = 'https://sc-net.onrender.com';
