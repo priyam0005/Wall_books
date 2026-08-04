@@ -442,12 +442,14 @@ export default function WallbooksChat() {
   const userObj = JSON.parse(localStorage.getItem('user'));
   const currentUserId = userObj?._id; // ← extract just the ID string
   const [contacts, setContacts] = useState([]);
-  const [activeContact, setActiveContact] = useState(null);
+
   const [messagesByContact, setMessagesByContact] = useState({});
   const [typingContacts, setTypingContacts] = useState({});
   const [onlineUsers, setOnlineUsers] = useState(new Set());
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [socketReady, setSocketReady] = useState(false);
+  const [activeContactId, setActiveContactId] = useState(null);
+  // Derive the full contact object from contacts array
 
   const socketRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -485,6 +487,8 @@ export default function WallbooksChat() {
     );
   }, [list]);
 
+  const activeContact = contacts.find((c) => c.id === activeContactId) || null;
+
   // ── 3. Connect Socket.io ─────────────────────────────────────────────────
   useEffect(() => {
     if (!currentUserId) return;
@@ -510,20 +514,19 @@ export default function WallbooksChat() {
       );
     });
 
-    socket.on('user:offline', (userId) => {
-      setOnlineUsers((prev) => {
-        const next = new Set(prev);
-        next.delete(userId);
-        return next;
-      });
-      setContacts((prev) =>
-        prev.map((c) => (c.id === userId ? { ...c, online: false } : c))
-      );
-    });
-
+    // ── FIX 4: incoming private:message — guard against adding duplicates ───────
     socket.on('private:message', (msg) => {
       const partnerId = msg.sender;
-      appendMessage(partnerId, { ...msg, isSent: false });
+      setMessagesByContact((prev) => {
+        const msgs = prev[partnerId] || [];
+        // Don't add if we already have this message by _id
+        if (msgs.some((m) => String(m._id) === String(msg._id))) return prev;
+        return {
+          ...prev,
+          [partnerId]: [...msgs, { ...msg, isSent: false }],
+        };
+      });
+
       setContacts((prev) =>
         prev.map((c) =>
           c.id === partnerId
@@ -538,6 +541,48 @@ export default function WallbooksChat() {
             : c
         )
       );
+    });
+
+    socket.on('user:offline', (userId) => {
+      setOnlineUsers((prev) => {
+        const next = new Set(prev);
+        next.delete(userId);
+        return next;
+      });
+      setContacts((prev) =>
+        prev.map((c) => (c.id === userId ? { ...c, online: false } : c))
+      );
+    });
+
+    // ── FIX 1: Send _tempId to backend so ACK can match & replace ──────────────
+    // In handleSend, your emit already has _tempId ✅
+    // But your backend's private:message handler ignores it.
+    // Since you can't change the backend easily, fix the ACK handler instead:
+
+    socket.on('private:message:sent', (msg) => {
+      const partnerId = msg.receiver;
+      setMessagesByContact((prev) => {
+        const msgs = prev[partnerId] || [];
+        // Check if optimistic message already exists — if so replace, don't append
+        const hasOptimistic = msgs.some(
+          (m) => m._tempId && m.message === msg.message && m.isSent
+        );
+        if (hasOptimistic) {
+          return {
+            ...prev,
+            [partnerId]: msgs.map((m) =>
+              m._tempId && m.message === msg.message && m.isSent
+                ? { ...msg, isSent: true, _tempId: undefined }
+                : m
+            ),
+          };
+        }
+        // No optimistic found — this is a genuine new message from ACK
+        return {
+          ...prev,
+          [partnerId]: [...msgs, { ...msg, isSent: true }],
+        };
+      });
     });
 
     socket.on('private:message:sent', (msg) => {
@@ -585,13 +630,14 @@ export default function WallbooksChat() {
   }, [currentUserId]);
 
   // ── 4. Load history when a contact is selected ───────────────────────────
+  // ── FIX 3: History useEffect — depend on activeContactId not activeContact ──
   useEffect(() => {
-    if (!activeContact || !socketRef.current || !socketReady) return;
-    if (messagesByContact[activeContact.id]?.length) return;
+    if (!activeContactId || !socketRef.current || !socketReady) return;
+    if (messagesByContact[activeContactId]?.length) return; // already loaded
 
     socketRef.current.emit('private:history', {
       userId: currentUserId,
-      partnerId: activeContact.id,
+      partnerId: activeContactId,
       page: 1,
       limit: 50,
     });
@@ -599,20 +645,20 @@ export default function WallbooksChat() {
     const handleHistory = (msgs) => {
       setMessagesByContact((prev) => ({
         ...prev,
-        [activeContact.id]: msgs.map((m) => ({
+        [activeContactId]: msgs.map((m) => ({
           ...m,
           isSent: m.sender === currentUserId,
         })),
       }));
 
       const unreadIds = msgs
-        .filter((m) => m.sender === activeContact.id && m.status !== 'read')
+        .filter((m) => m.sender === activeContactId && m.status !== 'read')
         .map((m) => String(m._id));
 
       if (unreadIds.length && socketRef.current) {
         socketRef.current.emit('private:message:read', {
           messageIds: unreadIds,
-          from: activeContact.id,
+          from: activeContactId,
         });
       }
     };
@@ -621,26 +667,13 @@ export default function WallbooksChat() {
     return () => {
       socketRef.current?.off('private:history', handleHistory);
     };
-  }, [activeContact, socketReady]);
-
-  // ── 5. Auto-scroll ───────────────────────────────────────────────────────
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messagesByContact, activeContact]);
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  const appendMessage = useCallback((contactId, msg) => {
-    setMessagesByContact((prev) => ({
-      ...prev,
-      [contactId]: [...(prev[contactId] || []), msg],
-    }));
-  }, []);
+  }, [activeContactId, socketReady]); // ← activeContactId (string), not activeContact (object)
 
   const handleContactSelect = (contact) => {
     setContacts((prev) =>
       prev.map((c) => ({ ...c, active: c.id === contact.id }))
     );
-    setActiveContact(contact);
+    setActiveContactId(contact.id); // ← store ID only, not the object
     setSidebarOpen(false);
   };
 
@@ -688,8 +721,9 @@ export default function WallbooksChat() {
     });
   };
 
-  const activeMessages = activeContact
-    ? messagesByContact[activeContact.id] || []
+  // ── FIX 5: Update activeMessages to use activeContactId ────────────────────
+  const activeMessages = activeContactId
+    ? messagesByContact[activeContactId] || []
     : [];
 
   // FIX 5: block render until list is available from Redux
