@@ -86,7 +86,7 @@ const router = createBrowserRouter([
     path: '/messages',
     element: (
       <PageWrapper>
-        <MessagingInterface />
+        <One />
       </PageWrapper>
     ),
   },
@@ -124,7 +124,7 @@ const router = createBrowserRouter([
 
   {
     path: '/PersonalChat',
-    element: <Privatechat />,
+    element: <One />,
   },
 ]);
 
