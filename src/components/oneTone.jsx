@@ -15,7 +15,7 @@ import { io } from 'socket.io-client';
 import { Friends } from '../store/Friends/friends'; // ← ADJUST path if needed
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const BACKEND_URL = process.env.VITE_API_BASE;
+const BACKEND_URL = 'https://sc-net.onrender.com';
 
 // ── Design Tokens ─────────────────────────────────────────────────────────────
 const colors = {
