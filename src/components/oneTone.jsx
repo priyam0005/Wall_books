@@ -365,14 +365,6 @@ function MessageInput({ onSend, onTyping }) {
           )
         }
       >
-        <button className="p-1.5 sm:p-2 rounded-xl text-[#cac4d4] hover:text-[#e5e1e4] hover:bg-white/5 transition-all">
-          <span
-            className="material-symbols-outlined"
-            style={{ fontSize: '20px' }}
-          >
-            attach_file
-          </span>
-        </button>
         <input
           type="text"
           value={value}
