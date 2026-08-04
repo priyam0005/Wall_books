@@ -15,6 +15,7 @@ import ClassicPostCreator from './components/CreatePost.jsx';
 import Profile from './components/Profile.jsx';
 import store from './store/index.js';
 import Profilia from './othercomps/Profilia.jsx';
+import One from './components/oneTone.jsx';
 
 import AuthForms from './othercomps/AuthComp/signIn.jsx';
 import LogIn from './othercomps/AuthComp/login.jsx';
@@ -115,6 +116,10 @@ const router = createBrowserRouter([
         <UserSearchResults />
       </PageWrapper>
     ),
+  },
+  {
+    path: '/one',
+    element: <One />,
   },
 
   {
