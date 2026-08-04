@@ -436,11 +436,11 @@ export default function WallbooksChat() {
   const dispatch = useDispatch();
 
   const { list } = useSelector((state) => state.dost);
-  const currentUserId = JSON.parse(localStorage.getItem('user'));
+
   const token = localStorage.getItem('auth');
 
-  console.log(currentUserId);
-
+  const userObj = JSON.parse(localStorage.getItem('user'));
+  const currentUserId = userObj?._id; // ← extract just the ID string
   const [contacts, setContacts] = useState([]);
   const [activeContact, setActiveContact] = useState(null);
   const [messagesByContact, setMessagesByContact] = useState({});
