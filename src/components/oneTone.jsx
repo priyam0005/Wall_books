@@ -439,6 +439,8 @@ export default function WallbooksChat() {
   const currentUserId = JSON.parse(localStorage.getItem('user'));
   const token = localStorage.getItem('auth');
 
+  console.log(currentUserId);
+
   const [contacts, setContacts] = useState([]);
   const [activeContact, setActiveContact] = useState(null);
   const [messagesByContact, setMessagesByContact] = useState({});
@@ -488,11 +490,12 @@ export default function WallbooksChat() {
     if (!currentUserId) return;
 
     const socket = io(`${BACKEND_URL}/private`, {
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'], // polling FIRST
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 2000,
+      timeout: 20000, // give Render time to wake up
     });
-
     socketRef.current = socket;
 
     socket.on('connect', () => {
