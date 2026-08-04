@@ -488,10 +488,15 @@ export default function WallbooksChat() {
   const [onlineUsers, setOnlineUsers] = useState(new Set());
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [socketReady, setSocketReady] = useState(false);
+  const [loading, setloading] = useState(true);
 
   const socketRef = useRef(null);
   const chatEndRef = useRef(null);
   const typingTimerRef = useRef({});
+
+  if (list) {
+    setloading = true;
+  }
 
   // ── 1. Fetch friends list from Redux on mount ────────────────────────────
   useEffect(() => {
@@ -755,7 +760,7 @@ export default function WallbooksChat() {
     : [];
 
   // ── Show full-screen loader while friends are loading ─────────────────────
-  if (friendsLoading && contacts.length === 0) {
+  if (loading) {
     return <LoadingScreen />;
   }
 
