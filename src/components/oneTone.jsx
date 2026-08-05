@@ -434,40 +434,67 @@ function EmptyChat() {
 
 export default function WallbooksChat() {
   const dispatch = useDispatch();
-
   const { list } = useSelector((state) => state.dost);
+
+  // FIX 2: stable, not recalculated every render
+  const currentUserId = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('user');
+      const parsed = JSON.parse(raw);
+      return typeof parsed === 'string' ? parsed : parsed?._id || parsed?.id;
+    } catch {
+      return localStorage.getItem('user');
+    }
+  }, []);
 
   const token = localStorage.getItem('auth');
 
-  const userObj = JSON.parse(localStorage.getItem('user'));
-  const currentUserId = userObj?._id; // ← extract just the ID string
   const [contacts, setContacts] = useState([]);
-  const [activeContact, setActiveContact] = useState(null);
+  const [activeContactId, setActiveContactId] = useState(null);
   const [messagesByContact, setMessagesByContact] = useState({});
   const [typingContacts, setTypingContacts] = useState({});
   const [onlineUsers, setOnlineUsers] = useState(new Set());
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [socketReady, setSocketReady] = useState(false);
 
   const socketRef = useRef(null);
   const chatEndRef = useRef(null);
   const typingTimerRef = useRef({});
 
-  // ── FIX 1: loading is true until list arrives from Redux ─────────────────
-  // list === null/undefined means still fetching; list (even []) means done
+  const activeContact = contacts.find((c) => c.id === activeContactId) || null;
   const loading = list == null;
+  const hasNoFriends = Array.isArray(list) && list.length === 0;
+  const activeMessages = activeContactId
+    ? messagesByContact[activeContactId] || []
+    : [];
 
-  // ── 1. Fetch friends list from Redux on mount ────────────────────────────
+  const appendMessage = useCallback((contactId, msg) => {
+    setMessagesByContact((prev) => {
+      const existing = prev[contactId] || [];
+      if (msg._id && existing.some((m) => String(m._id) === String(msg._id)))
+        return prev;
+      return { ...prev, [contactId]: [...existing, msg] };
+    });
+  }, []);
+
+  // FIX 1: keep-alive ping to prevent Render cold starts
   useEffect(() => {
-    if (token) {
-      dispatch(friends({ token })); // FIX 2: lowercase 'friends' matches the import
-    }
+    fetch(`${BACKEND_URL}/health`).catch(() => {});
+    const keepAlive = setInterval(
+      () => {
+        fetch(`${BACKEND_URL}/health`).catch(() => {});
+      },
+      14 * 60 * 1000
+    );
+    return () => clearInterval(keepAlive);
+  }, []);
+
+  useEffect(() => {
+    if (token) dispatch(friends({ token }));
   }, [dispatch, token]);
 
-  // ── 2. Map API friends → contact objects ─────────────────────────────────
+  // FIX 5: added onlineUsers to deps
   useEffect(() => {
-    if (!list?.length) return; // FIX 3: was inverted — exit when list is EMPTY, not when it has data
-
+    if (!list?.length) return;
     setContacts((prev) =>
       list.map((f) => {
         const existing = prev.find((c) => c.id === f.userId);
@@ -479,32 +506,33 @@ export default function WallbooksChat() {
           time: existing?.time || '',
           online: onlineUsers.has(f.userId),
           active: existing?.active || false,
-          // FIX 4: removed stray `s,` undefined variable
         };
       })
     );
-  }, [list]);
+  }, [list, onlineUsers]);
 
-  // ── 3. Connect Socket.io ─────────────────────────────────────────────────
   useEffect(() => {
     if (!currentUserId) return;
 
-    // In your useEffect where you connect:
     const socket = io(`${BACKEND_URL}/private`, {
-      transports: ['websocket', 'polling'], // ← swap order: try WebSocket first
+      transports: ['polling', 'websocket'],
       reconnection: true,
-      reconnectionAttempts: 15, // ← more attempts for Render cold starts
-      reconnectionDelay: 3000, // ← longer delay
-      reconnectionDelayMax: 10000,
-      timeout: 30000, // ← longer timeout for Render wake-up
-      withCredentials: true, // ← add this for CORS
-      extraHeaders: {
-        Authorization: `Bearer ${token}`, // ← send token in header, not URL
-      },
+      reconnectionAttempts: 10,
+      reconnectionDelay: 3000,
+      timeout: 30000,
     });
+
     socketRef.current = socket;
 
     socket.on('connect', () => {
+      console.log('[Socket] connected:', socket.id);
+      socket.emit('user:register', currentUserId);
+      setSocketReady(true);
+    });
+
+    // FIX 7: re-register on reconnect
+    socket.on('reconnect', () => {
+      console.log('[Socket] reconnected');
       socket.emit('user:register', currentUserId);
       setSocketReady(true);
     });
@@ -518,9 +546,9 @@ export default function WallbooksChat() {
 
     socket.on('user:offline', (userId) => {
       setOnlineUsers((prev) => {
-        const next = new Set(prev);
-        next.delete(userId);
-        return next;
+        const n = new Set(prev);
+        n.delete(userId);
+        return n;
       });
       setContacts((prev) =>
         prev.map((c) => (c.id === userId ? { ...c, online: false } : c))
@@ -529,7 +557,15 @@ export default function WallbooksChat() {
 
     socket.on('private:message', (msg) => {
       const partnerId = msg.sender;
-      appendMessage(partnerId, { ...msg, isSent: false });
+      setMessagesByContact((prev) => {
+        const existing = prev[partnerId] || [];
+        if (msg._id && existing.some((m) => String(m._id) === String(msg._id)))
+          return prev;
+        return {
+          ...prev,
+          [partnerId]: [...existing, { ...msg, isSent: false }],
+        };
+      });
       setContacts((prev) =>
         prev.map((c) =>
           c.id === partnerId
@@ -546,16 +582,23 @@ export default function WallbooksChat() {
       );
     });
 
+    // FIX 6: match by _tempId first
     socket.on('private:message:sent', (msg) => {
       const partnerId = msg.receiver;
       setMessagesByContact((prev) => {
-        const list = prev[partnerId] || [];
-        return {
-          ...prev,
-          [partnerId]: list.map((m) =>
-            m._tempId === msg._tempId ? { ...msg, isSent: true } : m
-          ),
-        };
+        const msgs = prev[partnerId] || [];
+        const tempIndex = msgs.findIndex(
+          (m) =>
+            m._tempId &&
+            (m._tempId === msg._tempId || m.message === msg.message) &&
+            m.isSent
+        );
+        if (tempIndex !== -1) {
+          const updated = [...msgs];
+          updated[tempIndex] = { ...msg, isSent: true };
+          return { ...prev, [partnerId]: updated };
+        }
+        return prev;
       });
     });
 
@@ -582,7 +625,10 @@ export default function WallbooksChat() {
       }
     });
 
-    socket.on('disconnect', () => setSocketReady(false));
+    socket.on('disconnect', () => {
+      console.log('[Socket] disconnected');
+      setSocketReady(false);
+    });
 
     return () => {
       socket.disconnect();
@@ -590,14 +636,15 @@ export default function WallbooksChat() {
     };
   }, [currentUserId]);
 
-  // ── 4. Load history when a contact is selected ───────────────────────────
+  // FIX 4: added socketRef.current.connected guard
   useEffect(() => {
-    if (!activeContact || !socketRef.current || !socketReady) return;
-    if (messagesByContact[activeContact.id]?.length) return;
+    if (!activeContactId || !socketRef.current || !socketReady) return;
+    if (!socketRef.current.connected) return;
+    if (messagesByContact[activeContactId]?.length) return;
 
     socketRef.current.emit('private:history', {
       userId: currentUserId,
-      partnerId: activeContact.id,
+      partnerId: activeContactId,
       page: 1,
       limit: 50,
     });
@@ -605,20 +652,18 @@ export default function WallbooksChat() {
     const handleHistory = (msgs) => {
       setMessagesByContact((prev) => ({
         ...prev,
-        [activeContact.id]: msgs.map((m) => ({
+        [activeContactId]: msgs.map((m) => ({
           ...m,
           isSent: m.sender === currentUserId,
         })),
       }));
-
       const unreadIds = msgs
-        .filter((m) => m.sender === activeContact.id && m.status !== 'read')
+        .filter((m) => m.sender === activeContactId && m.status !== 'read')
         .map((m) => String(m._id));
-
       if (unreadIds.length && socketRef.current) {
         socketRef.current.emit('private:message:read', {
           messageIds: unreadIds,
-          from: activeContact.id,
+          from: activeContactId,
         });
       }
     };
@@ -627,45 +672,43 @@ export default function WallbooksChat() {
     return () => {
       socketRef.current?.off('private:history', handleHistory);
     };
-  }, [activeContact, socketReady]);
+  }, [activeContactId, socketReady]);
 
-  // ── 5. Auto-scroll ───────────────────────────────────────────────────────
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messagesByContact, activeContact]);
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  const appendMessage = useCallback((contactId, msg) => {
-    setMessagesByContact((prev) => ({
-      ...prev,
-      [contactId]: [...(prev[contactId] || []), msg],
-    }));
-  }, []);
+  }, [messagesByContact, activeContactId]);
 
   const handleContactSelect = (contact) => {
     setContacts((prev) =>
       prev.map((c) => ({ ...c, active: c.id === contact.id }))
     );
-    setActiveContact(contact);
-    setSidebarOpen(false);
+    setActiveContactId(contact.id);
+  };
+
+  const handleBackToContacts = () => {
+    setActiveContactId(null);
+    setContacts((prev) => prev.map((c) => ({ ...c, active: false })));
   };
 
   const handleSend = (text) => {
-    if (!activeContact || !socketRef.current) return;
+    if (!activeContactId || !socketRef.current) return;
     const tempId = `temp_${Date.now()}`;
     const optimistic = {
       _tempId: tempId,
       sender: currentUserId,
-      receiver: activeContact.id,
+      receiver: activeContactId,
       message: text,
       isSent: true,
       status: 'sent',
       createdAt: new Date().toISOString(),
     };
-    appendMessage(activeContact.id, optimistic);
+    setMessagesByContact((prev) => ({
+      ...prev,
+      [activeContactId]: [...(prev[activeContactId] || []), optimistic],
+    }));
     setContacts((prev) =>
       prev.map((c) =>
-        c.id === activeContact.id
+        c.id === activeContactId
           ? {
               ...c,
               preview: text,
@@ -678,7 +721,7 @@ export default function WallbooksChat() {
       )
     );
     socketRef.current.emit('private:message', {
-      to: activeContact.id,
+      to: activeContactId,
       from: currentUserId,
       message: text,
       _tempId: tempId,
@@ -686,19 +729,14 @@ export default function WallbooksChat() {
   };
 
   const handleTyping = (isTyping) => {
-    if (!activeContact || !socketRef.current) return;
+    if (!activeContactId || !socketRef.current) return;
     socketRef.current.emit('private:typing', {
-      to: activeContact.id,
+      to: activeContactId,
       from: currentUserId,
       isTyping,
     });
   };
 
-  const activeMessages = activeContact
-    ? messagesByContact[activeContact.id] || []
-    : [];
-
-  // FIX 5: block render until list is available from Redux
   if (loading) return <LoadingScreen />;
 
   return (
@@ -716,15 +754,9 @@ export default function WallbooksChat() {
         className="flex bg-gradient-to-br from-black via-gray-900 to-black h-screen w-screen overflow-hidden relative"
         style={{ fontFamily: "'Hanken Grotesk', sans-serif" }}
       >
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black/60 z-20 sm:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
+        {/* Desktop sidebar */}
         <aside
-          className={`fixed inset-0 z-30 flex flex-col sm:relative sm:inset-auto sm:w-80 sm:flex-shrink-0 sm:translate-x-0 sm:z-10 w-full transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+          className="hidden sm:flex flex-col sm:w-80 flex-shrink-0"
           style={{
             background: 'rgba(19,19,21,0.97)',
             backdropFilter: 'blur(12px)',
@@ -734,19 +766,7 @@ export default function WallbooksChat() {
         >
           <div className="p-5 pb-2 flex items-center justify-between">
             <h2 className="text-lg font-bold text-[#e5e1e4]">Recent Chats</h2>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="sm:hidden p-1.5 rounded-lg text-[#cac4d4] hover:text-[#e5e1e4]"
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: '22px' }}
-              >
-                close
-              </span>
-            </button>
           </div>
-
           <div
             className="flex-grow overflow-y-auto px-3 py-2 space-y-1"
             style={{
@@ -754,11 +774,23 @@ export default function WallbooksChat() {
               scrollbarColor: 'rgba(255,255,255,0.1) transparent',
             }}
           >
-            {/* FIX 5: 'loading' is now a derived boolean — no more undeclared 'friendsLoading' */}
-            {contacts.length === 0 ? (
-              <p className="text-center text-xs text-[#cac4d4] mt-8 px-4">
-                No friends found. Connect with people to start chatting!
-              </p>
+            {hasNoFriends ? (
+              <div className="flex flex-col items-center justify-center h-full gap-3 py-12 opacity-60">
+                <span
+                  className="material-symbols-outlined"
+                  style={{ fontSize: '44px', color: colors.primary }}
+                >
+                  person_add
+                </span>
+                <div className="text-center px-4">
+                  <p className="text-xs font-semibold text-[#e5e1e4] mb-1">
+                    No contacts yet
+                  </p>
+                  <p className="text-[11px] text-[#cac4d4]">
+                    Add a contact to start messaging
+                  </p>
+                </div>
+              </div>
             ) : (
               contacts.map((contact) => (
                 <ContactItem
@@ -769,7 +801,6 @@ export default function WallbooksChat() {
               ))
             )}
           </div>
-
           <div className="p-5">
             <button
               className="w-full py-3 font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity text-sm"
@@ -789,7 +820,22 @@ export default function WallbooksChat() {
           </div>
         </aside>
 
-        <main className="flex-1 flex flex-col z-10 min-w-0 w-full sm:w-auto">
+        {/* Mobile contacts list */}
+        {!activeContactId && (
+          <div className="sm:hidden flex-1 flex flex-col min-w-0">
+            <MobileContactsView
+              contacts={contacts}
+              onlineUsers={onlineUsers}
+              onContactSelect={handleContactSelect}
+              hasNoFriends={hasNoFriends}
+            />
+          </div>
+        )}
+
+        {/* Chat window */}
+        <main
+          className={`flex-1 flex flex-col z-10 min-w-0 ${activeContactId ? 'flex' : 'hidden sm:flex'}`}
+        >
           {activeContact ? (
             <>
               <ChatHeader
@@ -797,7 +843,7 @@ export default function WallbooksChat() {
                   ...activeContact,
                   online: onlineUsers.has(activeContact.id),
                 }}
-                onBackClick={() => setSidebarOpen(true)}
+                onBackClick={handleBackToContacts}
               />
               <div
                 className="flex-grow overflow-y-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 flex flex-col"
@@ -820,7 +866,7 @@ export default function WallbooksChat() {
                         message={msg}
                       />
                     ))}
-                    {typingContacts[activeContact?.id] && (
+                    {typingContacts[activeContactId] && (
                       <TypingIndicator name={activeContact.name} />
                     )}
                   </>
@@ -830,29 +876,7 @@ export default function WallbooksChat() {
               <MessageInput onSend={handleSend} onTyping={handleTyping} />
             </>
           ) : (
-            <>
-              <div
-                className="sm:hidden h-14 px-3 border-b flex items-center gap-3 flex-shrink-0"
-                style={{
-                  background: 'rgba(19,19,21,0.2)',
-                  borderColor: 'rgba(255,255,255,0.05)',
-                }}
-              >
-                <button
-                  onClick={() => setSidebarOpen(true)}
-                  className="p-1.5 rounded-lg text-[#cac4d4] hover:text-[#e5e1e4]"
-                >
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ fontSize: '22px' }}
-                  >
-                    menu
-                  </span>
-                </button>
-                <h2 className="text-base font-bold text-[#e5e1e4]">Chats</h2>
-              </div>
-              <EmptyChat />
-            </>
+            <EmptyChat />
           )}
         </main>
       </div>
