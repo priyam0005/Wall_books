@@ -442,6 +442,8 @@ export default function WallbooksChat() {
       return localStorage.getItem('user');
     }
   })();
+
+  console.log(currentUserId);
   const token = localStorage.getItem('auth');
 
   const [contacts, setContacts] = useState([]);
