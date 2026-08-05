@@ -706,6 +706,14 @@ export default function WallbooksChat() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeContactId, messagesByContact[activeContactId]]);
 
+  useEffect(() => {
+    if (mobileView === 'chat') {
+      setTimeout(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'instant' });
+      }, 50);
+    }
+  }, [mobileView]);
+
   const handleContactSelect = (contact) => {
     setContacts((prev) =>
       prev.map((c) => ({ ...c, active: c.id === contact.id }))
