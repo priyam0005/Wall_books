@@ -505,13 +505,13 @@ export default function WallbooksChat() {
     if (!currentUserId) return;
 
     const socket = io(`${BACKEND_URL}/private`, {
-      transports: ['polling', 'websocket'], // polling first — survives Render cold start
+      transports: ['polling'], // ← polling ONLY at first
+      upgrade: true, // ← upgrade to WS after connected
       reconnection: true,
       reconnectionAttempts: 10,
-      reconnectionDelay: 2000,
-      timeout: 20000,
+      reconnectionDelay: 3000,
+      timeout: 30000, // ← give Render time to wake
     });
-
     socketRef.current = socket;
 
     socket.on('connect', () => {
