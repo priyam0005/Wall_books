@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { io } from 'socket.io-client';
 import { friends } from '../store/Friends/friends';
+import { useMemo } from 'react';
 
 const BACKEND_URL = 'https://sc-net.onrender.com';
 
