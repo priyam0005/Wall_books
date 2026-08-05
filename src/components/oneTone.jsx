@@ -704,7 +704,7 @@ export default function WallbooksChat() {
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messagesByContact, activeContactId]);
+  }, [activeContactId]);
 
   const handleContactSelect = (contact) => {
     setContacts((prev) =>
