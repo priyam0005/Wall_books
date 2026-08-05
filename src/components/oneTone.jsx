@@ -502,9 +502,10 @@ export default function WallbooksChat() {
   const dispatch = useDispatch();
   const { list } = useSelector((state) => state.dost);
 
-  const id = JSON.parse(localStorage.getItem('user'));
-  const currentUserId = id._id;
-  console.log(id);
+  const check = JSON.parse(localStorage.getItem('user'));
+  const currentUserId = check._id;
+
+  console.log(currentUserId);
 
   const token = localStorage.getItem('auth');
 
