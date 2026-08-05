@@ -493,7 +493,7 @@ export default function WallbooksChat() {
     const initSocket = () => {
       console.log('[Socket] Initialising for user:', currentUserId);
 
-      socket = io(`${BACKEND_URL}/private`, {
+      socket = io(`${BACKEND_URL}`, {
         transports: ['polling', 'websocket'],
         reconnection: true,
         reconnectionAttempts: 20,
