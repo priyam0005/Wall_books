@@ -109,11 +109,7 @@ function ContactItem({ contact, onClick }) {
       <div className="flex-grow min-w-0">
         <div className="flex justify-between items-center mb-0.5">
           <span
-            className={`text-sm font-semibold truncate transition-colors ${
-              contact.active
-                ? 'text-[#e5e1e4]'
-                : 'text-[#cac4d4] group-hover:text-[#e5e1e4]'
-            }`}
+            className={`text-sm font-semibold truncate transition-colors ${contact.active ? 'text-[#e5e1e4]' : 'text-[#cac4d4] group-hover:text-[#e5e1e4]'}`}
           >
             {contact.name}
           </span>
@@ -133,7 +129,7 @@ function ContactItem({ contact, onClick }) {
   );
 }
 
-function TypingIndicator({ name }) {
+function TypingIndicator() {
   return (
     <div className="flex items-end gap-2 max-w-[85%]">
       <div
@@ -166,7 +162,7 @@ function MessageBubble({ message }) {
       })
     : message.time;
 
-  if (message.sent || message.isSent) {
+  if (message.isSent) {
     return (
       <div className="flex items-end gap-3 max-w-[85%] sm:max-w-[80%] ml-auto flex-row-reverse">
         <div className="flex flex-col items-end gap-1">
@@ -254,7 +250,6 @@ function ChatHeader({ contact, onBackClick }) {
         <button
           onClick={onBackClick}
           className="sm:hidden p-1.5 rounded-lg text-[#cac4d4] hover:text-[#e5e1e4] transition-colors"
-          aria-label="Back to contacts"
         >
           <span
             className="material-symbols-outlined"
@@ -436,13 +431,21 @@ export default function WallbooksChat() {
   const dispatch = useDispatch();
   const { list } = useSelector((state) => state.dost);
 
-  // ── FIX: Parse user data once, outside effects, so it's stable ──────────
+  // ── Extract user ID correctly from the stored object ──────────────────────
+  const currentUserId = (() => {
+    try {
+      const raw = localStorage.getItem('user');
+      const parsed = JSON.parse(raw);
+      // Handle both cases: stored as plain string ID or as object
+      return typeof parsed === 'string' ? parsed : parsed?._id || parsed?.id;
+    } catch {
+      return localStorage.getItem('user');
+    }
+  })();
   const token = localStorage.getItem('auth');
-  const userObj = JSON.parse(localStorage.getItem('user') || '{}');
-  const currentUserId = userObj?._id;
 
   const [contacts, setContacts] = useState([]);
-  const [activeContact, setActiveContact] = useState(null);
+  const [activeContactId, setActiveContactId] = useState(null); // ← store ID only
   const [messagesByContact, setMessagesByContact] = useState({});
   const [typingContacts, setTypingContacts] = useState({});
   const [onlineUsers, setOnlineUsers] = useState(new Set());
@@ -452,22 +455,33 @@ export default function WallbooksChat() {
   const socketRef = useRef(null);
   const chatEndRef = useRef(null);
   const typingTimerRef = useRef({});
-  // ── FIX: Keep activeContact accessible inside socket callbacks ───────────
-  const activeContactRef = useRef(null);
 
+  // Derive full contact object from ID — never goes stale
+  const activeContact = contacts.find((c) => c.id === activeContactId) || null;
+
+  // Block render until list arrives from Redux
   const loading = list == null;
 
-  // ── 1. Fetch friends list from Redux on mount ────────────────────────────
+  // ── MUST be defined BEFORE the socket useEffect ───────────────────────────
+  const appendMessage = useCallback((contactId, msg) => {
+    setMessagesByContact((prev) => {
+      const existing = prev[contactId] || [];
+      // Deduplicate by _id to prevent double-render from ACK + optimistic
+      if (msg._id && existing.some((m) => String(m._id) === String(msg._id))) {
+        return prev;
+      }
+      return { ...prev, [contactId]: [...existing, msg] };
+    });
+  }, []);
+
+  // ── 1. Fetch friends ──────────────────────────────────────────────────────
   useEffect(() => {
-    if (token) {
-      dispatch(friends({ token }));
-    }
+    if (token) dispatch(friends({ token }));
   }, [dispatch, token]);
 
-  // ── 2. Map API friends → contact objects ─────────────────────────────────
+  // ── 2. Map friends list → contacts ───────────────────────────────────────
   useEffect(() => {
     if (!list?.length) return;
-
     setContacts((prev) =>
       list.map((f) => {
         const existing = prev.find((c) => c.id === f.userId);
@@ -484,64 +498,24 @@ export default function WallbooksChat() {
     );
   }, [list]);
 
-  // ── 3. Connect Socket.io ─────────────────────────────────────────────────
+  // ── 3. Socket.io connection ───────────────────────────────────────────────
   useEffect(() => {
-    // FIX: hard guard — never connect without a valid userId
-    if (!currentUserId) {
-      console.warn('[Socket] No currentUserId found — skipping socket init');
-      return;
-    }
-
-    console.log('[Socket] Initialising for user:', currentUserId);
+    if (!currentUserId) return;
 
     const socket = io(`${BACKEND_URL}/private`, {
-      // FIX: websocket first — avoids the 400 on Render's polling endpoint
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'], // polling first — survives Render cold start
       reconnection: true,
-      reconnectionAttempts: 15,
-      reconnectionDelay: 3000,
-      reconnectionDelayMax: 10000,
-      // FIX: longer timeout so Render's cold-start has time to wake up
-      timeout: 30000,
-      withCredentials: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 2000,
+      timeout: 20000,
     });
 
     socketRef.current = socket;
 
-    // ── FIX: catch-all listener for debugging — remove in production ────────
-    socket.onAny((event, ...args) => {
-      console.log('[Socket EVENT]', event, args);
-    });
-
     socket.on('connect', () => {
-      console.log(
-        '[Socket] Connected — id:',
-        socket.id,
-        '| registering userId:',
-        currentUserId
-      );
-      // FIX: emit user:register only after confirmed connect, with a verified userId
+      console.log('[Socket] connected:', socket.id);
       socket.emit('user:register', currentUserId);
       setSocketReady(true);
-    });
-
-    socket.on('connect_error', (err) => {
-      console.error('[Socket] connect_error:', err.message);
-    });
-
-    socket.on('disconnect', (reason) => {
-      console.warn('[Socket] Disconnected — reason:', reason);
-      setSocketReady(false);
-    });
-
-    socket.on('reconnect', (attempt) => {
-      console.log(
-        '[Socket] Reconnected after',
-        attempt,
-        'attempt(s) — re-registering userId'
-      );
-      // FIX: re-register after reconnection so the server maps the new socket id
-      socket.emit('user:register', currentUserId);
     });
 
     socket.on('user:online', (userId) => {
@@ -553,36 +527,28 @@ export default function WallbooksChat() {
 
     socket.on('user:offline', (userId) => {
       setOnlineUsers((prev) => {
-        const next = new Set(prev);
-        next.delete(userId);
-        return next;
+        const n = new Set(prev);
+        n.delete(userId);
+        return n;
       });
       setContacts((prev) =>
         prev.map((c) => (c.id === userId ? { ...c, online: false } : c))
       );
     });
 
+    // ── Incoming message from partner ─────────────────────────────────────
     socket.on('private:message', (msg) => {
-      const partnerId = msg.sender || msg.from;
-      console.log('[Socket] Received private:message from:', partnerId, msg);
-
-      // FIX: prevent duplicate if this message was already added optimistically
+      const partnerId = msg.sender;
+      // Deduplicate before appending
       setMessagesByContact((prev) => {
-        const msgs = prev[partnerId] || [];
-
-        // Check if message already exists by _id or _tempId
-        const alreadyExists =
-          msgs.some((m) => String(m._id) === String(msg._id)) ||
-          (msg._tempId && msgs.some((m) => m._tempId === msg._tempId));
-
-        if (alreadyExists) return prev;
-
+        const existing = prev[partnerId] || [];
+        if (msg._id && existing.some((m) => String(m._id) === String(msg._id)))
+          return prev;
         return {
           ...prev,
-          [partnerId]: [...msgs, { ...msg, isSent: false }],
+          [partnerId]: [...existing, { ...msg, isSent: false }],
         };
       });
-
       setContacts((prev) =>
         prev.map((c) =>
           c.id === partnerId
@@ -597,45 +563,30 @@ export default function WallbooksChat() {
             : c
         )
       );
-
-      // Mark as read immediately if chat is open
-      if (activeContactRef.current?.id === partnerId && socket.connected) {
-        socket.emit('private:message:read', {
-          messageIds: [String(msg._id)],
-          from: partnerId,
-        });
-      }
     });
 
+    // ── ACK from server after we sent a message ────────────────────────────
+    // Replace the optimistic message (matched by _tempId) with the confirmed one.
+    // If no match found, do NOT append — the optimistic is already showing.
     socket.on('private:message:sent', (msg) => {
-      const partnerId = msg.receiver || msg.to;
-      console.log(
-        '[Socket] private:message:sent confirmed for partner:',
-        partnerId,
-        msg
-      );
-
+      const partnerId = msg.receiver;
       setMessagesByContact((prev) => {
         const msgs = prev[partnerId] || [];
-        const tempIndex = msgs.findIndex((m) => m._tempId === msg._tempId);
-
+        const tempIndex = msgs.findIndex(
+          (m) => m._tempId && m.message === msg.message && m.isSent
+        );
         if (tempIndex !== -1) {
-          // FIX: replace optimistic message in place — never append
+          // Replace optimistic with confirmed message
           const updated = [...msgs];
-          updated[tempIndex] = { ...msg, isSent: true, _tempId: msg._tempId };
+          updated[tempIndex] = { ...msg, isSent: true };
           return { ...prev, [partnerId]: updated };
         }
-
-        // FIX: if no matching tempId found, check if _id already exists to avoid duplicate
-        const alreadyExists = msgs.some(
-          (m) => String(m._id) === String(msg._id)
-        );
-        if (alreadyExists) return prev;
-
-        return { ...prev, [partnerId]: [...msgs, { ...msg, isSent: true }] };
+        // No optimistic found — still don't double-add, just return prev
+        return prev;
       });
     });
 
+    // ── Read receipts ──────────────────────────────────────────────────────
     socket.on('private:message:read', ({ messageIds }) => {
       setMessagesByContact((prev) => {
         const updated = { ...prev };
@@ -648,137 +599,101 @@ export default function WallbooksChat() {
       });
     });
 
+    // ── Typing indicator ───────────────────────────────────────────────────
     socket.on('private:typing', ({ from, isTyping }) => {
-      // FIX: handle both 'from' and 'sender' field names
-      const senderId = from;
-      setTypingContacts((prev) => ({ ...prev, [senderId]: isTyping }));
-      clearTimeout(typingTimerRef.current[senderId]);
+      setTypingContacts((prev) => ({ ...prev, [from]: isTyping }));
+      clearTimeout(typingTimerRef.current[from]);
       if (isTyping) {
-        typingTimerRef.current[senderId] = setTimeout(
-          () => setTypingContacts((p) => ({ ...p, [senderId]: false })),
+        typingTimerRef.current[from] = setTimeout(
+          () => setTypingContacts((p) => ({ ...p, [from]: false })),
           3000
         );
       }
     });
 
+    socket.on('disconnect', () => {
+      console.log('[Socket] disconnected');
+      setSocketReady(false);
+    });
+
     return () => {
-      console.log('[Socket] Cleaning up socket connection');
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [currentUserId]);
+  }, [currentUserId]); // appendMessage removed from deps — it's stable via useCallback
 
-  // ── 4. Keep activeContactRef in sync ─────────────────────────────────────
+  // ── 4. Load history when active contact changes ───────────────────────────
   useEffect(() => {
-    activeContactRef.current = activeContact;
-  }, [activeContact]);
-
-  // ── 5. Load history when a contact is selected ───────────────────────────
-  useEffect(() => {
-    if (!activeContact || !socketRef.current || !socketReady) return;
-
-    // Skip if messages are already loaded for this contact
-    if (messagesByContact[activeContact.id]?.length) return;
-
-    console.log('[Socket] Requesting history for:', activeContact.id);
+    if (!activeContactId || !socketRef.current || !socketReady) return;
+    if (messagesByContact[activeContactId]?.length) return; // already loaded
 
     socketRef.current.emit('private:history', {
       userId: currentUserId,
-      partnerId: activeContact.id,
+      partnerId: activeContactId,
       page: 1,
       limit: 50,
     });
 
     const handleHistory = (msgs) => {
-      console.log('[Socket] History received:', msgs?.length, 'messages');
-
       setMessagesByContact((prev) => ({
         ...prev,
-        [activeContact.id]: msgs.map((m) => ({
+        [activeContactId]: msgs.map((m) => ({
           ...m,
           isSent: m.sender === currentUserId,
         })),
       }));
-
       const unreadIds = msgs
-        .filter((m) => m.sender === activeContact.id && m.status !== 'read')
+        .filter((m) => m.sender === activeContactId && m.status !== 'read')
         .map((m) => String(m._id));
-
       if (unreadIds.length && socketRef.current) {
-        console.log('[Socket] Marking', unreadIds.length, 'messages as read');
         socketRef.current.emit('private:message:read', {
           messageIds: unreadIds,
-          from: activeContact.id,
+          from: activeContactId,
         });
       }
     };
 
     socketRef.current.once('private:history', handleHistory);
-
     return () => {
       socketRef.current?.off('private:history', handleHistory);
     };
-  }, [activeContact, socketReady]);
+  }, [activeContactId, socketReady]); // ← stable string ID, not object
 
-  // ── 6. Auto-scroll ───────────────────────────────────────────────────────
+  // ── 5. Auto-scroll ────────────────────────────────────────────────────────
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messagesByContact, activeContact]);
+  }, [messagesByContact, activeContactId]);
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  const appendMessage = useCallback((contactId, msg) => {
-    setMessagesByContact((prev) => {
-      const msgs = prev[contactId] || [];
-      // FIX: never append if _id already exists (prevents history + live event duplicate)
-      if (msg._id && msgs.some((m) => String(m._id) === String(msg._id))) {
-        return prev;
-      }
-      return { ...prev, [contactId]: [...msgs, msg] };
-    });
-  }, []);
-
+  // ── Handlers ──────────────────────────────────────────────────────────────
   const handleContactSelect = (contact) => {
     setContacts((prev) =>
       prev.map((c) => ({ ...c, active: c.id === contact.id }))
     );
-    setActiveContact(contact);
+    setActiveContactId(contact.id); // ← ID only
     setSidebarOpen(false);
   };
 
   const handleSend = (text) => {
-    if (!activeContact || !socketRef.current) {
-      console.warn('[handleSend] Blocked — no activeContact or socket');
-      return;
-    }
-
-    // FIX: check socket is actually connected before emitting
-    if (!socketRef.current.connected) {
-      console.warn('[handleSend] Socket not connected — message not sent');
-      return;
-    }
-
+    if (!activeContactId || !socketRef.current) return;
     const tempId = `temp_${Date.now()}`;
     const optimistic = {
       _tempId: tempId,
       sender: currentUserId,
-      receiver: activeContact.id,
+      receiver: activeContactId,
       message: text,
       isSent: true,
       status: 'sent',
       createdAt: new Date().toISOString(),
     };
-
-    // FIX: add optimistic message only once with unique tempId
-    setMessagesByContact((prev) => {
-      const msgs = prev[activeContact.id] || [];
-      // Guard: don't add if tempId already exists (strict double-send protection)
-      if (msgs.some((m) => m._tempId === tempId)) return prev;
-      return { ...prev, [activeContact.id]: [...msgs, optimistic] };
-    });
-
+    // Add optimistic message immediately
+    setMessagesByContact((prev) => ({
+      ...prev,
+      [activeContactId]: [...(prev[activeContactId] || []), optimistic],
+    }));
+    // Update contact preview
     setContacts((prev) =>
       prev.map((c) =>
-        c.id === activeContact.id
+        c.id === activeContactId
           ? {
               ...c,
               preview: text,
@@ -790,31 +705,25 @@ export default function WallbooksChat() {
           : c
       )
     );
-
-    const payload = {
-      to: activeContact.id,
-      receiver: activeContact.id,
+    socketRef.current.emit('private:message', {
+      to: activeContactId,
       from: currentUserId,
-      sender: currentUserId,
       message: text,
       _tempId: tempId,
-    };
-
-    console.log('[handleSend] Emitting private:message:', payload);
-    socketRef.current.emit('private:message', payload);
+    });
   };
 
   const handleTyping = (isTyping) => {
-    if (!activeContact || !socketRef.current?.connected) return;
+    if (!activeContactId || !socketRef.current) return;
     socketRef.current.emit('private:typing', {
-      to: activeContact.id,
+      to: activeContactId,
       from: currentUserId,
       isTyping,
     });
   };
 
-  const activeMessages = activeContact
-    ? messagesByContact[activeContact.id] || []
+  const activeMessages = activeContactId
+    ? messagesByContact[activeContactId] || []
     : [];
 
   if (loading) return <LoadingScreen />;
@@ -841,10 +750,9 @@ export default function WallbooksChat() {
           />
         )}
 
+        {/* ── Sidebar ── */}
         <aside
-          className={`fixed inset-0 z-30 flex flex-col sm:relative sm:inset-auto sm:w-80 sm:flex-shrink-0 sm:translate-x-0 sm:z-10 w-full transition-transform duration-300 ease-in-out ${
-            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
+          className={`fixed inset-0 z-30 flex flex-col sm:relative sm:inset-auto sm:w-80 sm:flex-shrink-0 sm:translate-x-0 sm:z-10 w-full transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
           style={{
             background: 'rgba(19,19,21,0.97)',
             backdropFilter: 'blur(12px)',
@@ -866,7 +774,6 @@ export default function WallbooksChat() {
               </span>
             </button>
           </div>
-
           <div
             className="flex-grow overflow-y-auto px-3 py-2 space-y-1"
             style={{
@@ -888,7 +795,6 @@ export default function WallbooksChat() {
               ))
             )}
           </div>
-
           <div className="p-5">
             <button
               className="w-full py-3 font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity text-sm"
@@ -908,6 +814,7 @@ export default function WallbooksChat() {
           </div>
         </aside>
 
+        {/* ── Chat Window ── */}
         <main className="flex-1 flex flex-col z-10 min-w-0 w-full sm:w-auto">
           {activeContact ? (
             <>
@@ -939,7 +846,7 @@ export default function WallbooksChat() {
                         message={msg}
                       />
                     ))}
-                    {typingContacts[activeContact?.id] && (
+                    {typingContacts[activeContactId] && (
                       <TypingIndicator name={activeContact.name} />
                     )}
                   </>
