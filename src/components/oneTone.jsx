@@ -495,15 +495,14 @@ export default function WallbooksChat() {
     console.log('[Socket] Initialising for user:', currentUserId);
 
     const socket = io(`${BACKEND_URL}/private`, {
-      // FIX: websocket first — avoids the 400 on Render's polling endpoint
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'], // ← polling FIRST for Render cold start
       reconnection: true,
-      reconnectionAttempts: 15,
-      reconnectionDelay: 3000,
+      reconnectionAttempts: 20,
+      reconnectionDelay: 2000,
       reconnectionDelayMax: 10000,
-      // FIX: longer timeout so Render's cold-start has time to wake up
-      timeout: 30000,
-      withCredentials: true,
+      timeout: 60000, // ← 60s for Render to fully wake up
+      withCredentials: false, // ← set to false if backend doesn't send CORS credentials
+      forceNew: true, // ← force fresh connection, no cached failed attempt
     });
 
     socketRef.current = socket;
