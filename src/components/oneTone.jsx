@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { io } from 'socket.io-client';
 import { friends } from '../store/Friends/friends';
