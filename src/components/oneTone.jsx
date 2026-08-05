@@ -504,6 +504,7 @@ export default function WallbooksChat() {
 
   const id = JSON.parse(localStorage.getItem('user'));
   const currentUserId = id.id;
+  console.log(id);
 
   const token = localStorage.getItem('auth');
 
