@@ -484,158 +484,186 @@ export default function WallbooksChat() {
     );
   }, [list]);
 
+  // ── 3. Connect Socket.io ─────────────────────────────────────────────────
   useEffect(() => {
-    if (!currentUserId) return;
+    // FIX: hard guard — never connect without a valid userId
+    if (!currentUserId) {
+      console.warn('[Socket] No currentUserId found — skipping socket init');
+      return;
+    }
 
-    let socket;
-    let connectTimer;
+    console.log('[Socket] Initialising for user:', currentUserId);
 
-    const initSocket = () => {
-      console.log('[Socket] Initialising for user:', currentUserId);
+    const socket = io(`${BACKEND_URL}/private`, {
+      // FIX: websocket first — avoids the 400 on Render's polling endpoint
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 15,
+      reconnectionDelay: 3000,
+      reconnectionDelayMax: 10000,
+      // FIX: longer timeout so Render's cold-start has time to wake up
+      timeout: 30000,
+      withCredentials: true,
+    });
 
-      socket = io(`${BACKEND_URL}/private`, {
-        transports: ['polling', 'websocket'],
-        reconnection: true,
-        reconnectionAttempts: 20,
-        reconnectionDelay: 2000,
-        reconnectionDelayMax: 10000,
-        timeout: 60000,
-        withCredentials: false,
-        forceNew: true,
+    socketRef.current = socket;
+
+    // ── FIX: catch-all listener for debugging — remove in production ────────
+    socket.onAny((event, ...args) => {
+      console.log('[Socket EVENT]', event, args);
+    });
+
+    socket.on('connect', () => {
+      console.log(
+        '[Socket] Connected — id:',
+        socket.id,
+        '| registering userId:',
+        currentUserId
+      );
+      // FIX: emit user:register only after confirmed connect, with a verified userId
+      socket.emit('user:register', currentUserId);
+      setSocketReady(true);
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('[Socket] connect_error:', err.message);
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.warn('[Socket] Disconnected — reason:', reason);
+      setSocketReady(false);
+    });
+
+    socket.on('reconnect', (attempt) => {
+      console.log(
+        '[Socket] Reconnected after',
+        attempt,
+        'attempt(s) — re-registering userId'
+      );
+      // FIX: re-register after reconnection so the server maps the new socket id
+      socket.emit('user:register', currentUserId);
+    });
+
+    socket.on('user:online', (userId) => {
+      setOnlineUsers((prev) => new Set([...prev, userId]));
+      setContacts((prev) =>
+        prev.map((c) => (c.id === userId ? { ...c, online: true } : c))
+      );
+    });
+
+    socket.on('user:offline', (userId) => {
+      setOnlineUsers((prev) => {
+        const next = new Set(prev);
+        next.delete(userId);
+        return next;
+      });
+      setContacts((prev) =>
+        prev.map((c) => (c.id === userId ? { ...c, online: false } : c))
+      );
+    });
+
+    socket.on('private:message', (msg) => {
+      const partnerId = msg.sender || msg.from;
+      console.log('[Socket] Received private:message from:', partnerId, msg);
+
+      // FIX: prevent duplicate if this message was already added optimistically
+      setMessagesByContact((prev) => {
+        const msgs = prev[partnerId] || [];
+
+        // Check if message already exists by _id or _tempId
+        const alreadyExists =
+          msgs.some((m) => String(m._id) === String(msg._id)) ||
+          (msg._tempId && msgs.some((m) => m._tempId === msg._tempId));
+
+        if (alreadyExists) return prev;
+
+        return {
+          ...prev,
+          [partnerId]: [...msgs, { ...msg, isSent: false }],
+        };
       });
 
-      socketRef.current = socket;
+      setContacts((prev) =>
+        prev.map((c) =>
+          c.id === partnerId
+            ? {
+                ...c,
+                preview: msg.message,
+                time: new Date(msg.createdAt).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }),
+              }
+            : c
+        )
+      );
 
-      socket.onAny((event, ...args) => {
-        console.log('[Socket EVENT]', event, args);
-      });
-
-      socket.on('connect', () => {
-        console.log('[Socket] Connected:', socket.id);
-        socket.emit('user:register', currentUserId);
-        setSocketReady(true);
-      });
-
-      socket.on('connect_error', (err) => {
-        console.error('[Socket] connect_error:', err.message);
-      });
-
-      socket.on('disconnect', (reason) => {
-        console.warn('[Socket] Disconnected:', reason);
-        setSocketReady(false);
-      });
-
-      socket.on('reconnect', () => {
-        console.log('[Socket] Reconnected — re-registering');
-        socket.emit('user:register', currentUserId);
-      });
-
-      socket.on('user:online', (userId) => {
-        setOnlineUsers((prev) => new Set([...prev, userId]));
-        setContacts((prev) =>
-          prev.map((c) => (c.id === userId ? { ...c, online: true } : c))
-        );
-      });
-
-      socket.on('user:offline', (userId) => {
-        setOnlineUsers((prev) => {
-          const next = new Set(prev);
-          next.delete(userId);
-          return next;
+      // Mark as read immediately if chat is open
+      if (activeContactRef.current?.id === partnerId && socket.connected) {
+        socket.emit('private:message:read', {
+          messageIds: [String(msg._id)],
+          from: partnerId,
         });
-        setContacts((prev) =>
-          prev.map((c) => (c.id === userId ? { ...c, online: false } : c))
-        );
-      });
+      }
+    });
 
-      socket.on('private:message', (msg) => {
-        const partnerId = msg.sender || msg.from;
-        appendMessage(partnerId, { ...msg, isSent: false });
-        setContacts((prev) =>
-          prev.map((c) =>
-            c.id === partnerId
-              ? {
-                  ...c,
-                  preview: msg.message,
-                  time: new Date(msg.createdAt).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  }),
-                }
-              : c
-          )
-        );
-        if (activeContactRef.current?.id === partnerId && socket.connected) {
-          socket.emit('private:message:read', {
-            messageIds: [String(msg._id)],
-            from: partnerId,
-          });
+    socket.on('private:message:sent', (msg) => {
+      const partnerId = msg.receiver || msg.to;
+      console.log(
+        '[Socket] private:message:sent confirmed for partner:',
+        partnerId,
+        msg
+      );
+
+      setMessagesByContact((prev) => {
+        const msgs = prev[partnerId] || [];
+        const tempIndex = msgs.findIndex((m) => m._tempId === msg._tempId);
+
+        if (tempIndex !== -1) {
+          // FIX: replace optimistic message in place — never append
+          const updated = [...msgs];
+          updated[tempIndex] = { ...msg, isSent: true, _tempId: msg._tempId };
+          return { ...prev, [partnerId]: updated };
         }
-      });
 
-      socket.on('private:message:sent', (msg) => {
-        const partnerId = msg.receiver || msg.to;
-        setMessagesByContact((prev) => {
-          const msgs = prev[partnerId] || [];
-          const found = msgs.some((m) => m._tempId === msg._tempId);
-          const updated = msgs.map((m) =>
-            m._tempId === msg._tempId ? { ...msg, isSent: true } : m
+        // FIX: if no matching tempId found, check if _id already exists to avoid duplicate
+        const alreadyExists = msgs.some(
+          (m) => String(m._id) === String(msg._id)
+        );
+        if (alreadyExists) return prev;
+
+        return { ...prev, [partnerId]: [...msgs, { ...msg, isSent: true }] };
+      });
+    });
+
+    socket.on('private:message:read', ({ messageIds }) => {
+      setMessagesByContact((prev) => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach((uid) => {
+          updated[uid] = updated[uid].map((m) =>
+            messageIds.includes(String(m._id)) ? { ...m, status: 'read' } : m
           );
-          return {
-            ...prev,
-            [partnerId]: found ? updated : [...msgs, { ...msg, isSent: true }],
-          };
         });
+        return updated;
       });
+    });
 
-      socket.on('private:message:read', ({ messageIds }) => {
-        setMessagesByContact((prev) => {
-          const updated = { ...prev };
-          Object.keys(updated).forEach((uid) => {
-            updated[uid] = updated[uid].map((m) =>
-              messageIds.includes(String(m._id)) ? { ...m, status: 'read' } : m
-            );
-          });
-          return updated;
-        });
-      });
-
-      socket.on('private:typing', ({ from, isTyping }) => {
-        setTypingContacts((prev) => ({ ...prev, [from]: isTyping }));
-        clearTimeout(typingTimerRef.current[from]);
-        if (isTyping) {
-          typingTimerRef.current[from] = setTimeout(
-            () => setTypingContacts((p) => ({ ...p, [from]: false })),
-            3000
-          );
-        }
-      });
-    };
-
-    // ── FIX: Wake up Render server before connecting socket ──────────────────
-    const wakeAndConnect = async () => {
-      try {
-        console.log('[Socket] Pinging server to wake up Render...');
-        await fetch(`${BACKEND_URL}/health`, {
-          method: 'GET',
-          mode: 'no-cors',
-        });
-        console.log('[Socket] Server awake — connecting in 2s...');
-      } catch (e) {
-        console.warn(
-          '[Socket] Wake ping failed (expected on first load):',
-          e.message
+    socket.on('private:typing', ({ from, isTyping }) => {
+      // FIX: handle both 'from' and 'sender' field names
+      const senderId = from;
+      setTypingContacts((prev) => ({ ...prev, [senderId]: isTyping }));
+      clearTimeout(typingTimerRef.current[senderId]);
+      if (isTyping) {
+        typingTimerRef.current[senderId] = setTimeout(
+          () => setTypingContacts((p) => ({ ...p, [senderId]: false })),
+          3000
         );
       }
-      // Wait 2s after ping then connect — gives Render time to fully boot
-      connectTimer = setTimeout(initSocket, 2000);
-    };
-
-    wakeAndConnect();
+    });
 
     return () => {
-      clearTimeout(connectTimer);
-      socket?.disconnect();
+      console.log('[Socket] Cleaning up socket connection');
+      socket.disconnect();
       socketRef.current = null;
     };
   }, [currentUserId]);
@@ -699,10 +727,14 @@ export default function WallbooksChat() {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const appendMessage = useCallback((contactId, msg) => {
-    setMessagesByContact((prev) => ({
-      ...prev,
-      [contactId]: [...(prev[contactId] || []), msg],
-    }));
+    setMessagesByContact((prev) => {
+      const msgs = prev[contactId] || [];
+      // FIX: never append if _id already exists (prevents history + live event duplicate)
+      if (msg._id && msgs.some((m) => String(m._id) === String(msg._id))) {
+        return prev;
+      }
+      return { ...prev, [contactId]: [...msgs, msg] };
+    });
   }, []);
 
   const handleContactSelect = (contact) => {
@@ -736,7 +768,13 @@ export default function WallbooksChat() {
       createdAt: new Date().toISOString(),
     };
 
-    appendMessage(activeContact.id, optimistic);
+    // FIX: add optimistic message only once with unique tempId
+    setMessagesByContact((prev) => {
+      const msgs = prev[activeContact.id] || [];
+      // Guard: don't add if tempId already exists (strict double-send protection)
+      if (msgs.some((m) => m._tempId === tempId)) return prev;
+      return { ...prev, [activeContact.id]: [...msgs, optimistic] };
+    });
 
     setContacts((prev) =>
       prev.map((c) =>
@@ -753,8 +791,6 @@ export default function WallbooksChat() {
       )
     );
 
-    // FIX: emit with both field-name conventions so the backend recognises it
-    // regardless of whether it expects 'to'/'from' or 'receiver'/'sender'
     const payload = {
       to: activeContact.id,
       receiver: activeContact.id,
