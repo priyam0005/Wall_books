@@ -503,7 +503,7 @@ export default function WallbooksChat() {
   const { list } = useSelector((state) => state.dost);
 
   const check = JSON.parse(localStorage.getItem('user'));
-  const currentUserId = check._id;
+  const currentUserId = check?._id;
 
   console.log(currentUserId);
 
