@@ -489,12 +489,18 @@ export default function WallbooksChat() {
   useEffect(() => {
     if (!currentUserId) return;
 
+    // In your useEffect where you connect:
     const socket = io(`${BACKEND_URL}/private`, {
-      transports: ['polling', 'websocket'], // polling FIRST
+      transports: ['websocket', 'polling'], // ← swap order: try WebSocket first
       reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 2000,
-      timeout: 20000, // give Render time to wake up
+      reconnectionAttempts: 15, // ← more attempts for Render cold starts
+      reconnectionDelay: 3000, // ← longer delay
+      reconnectionDelayMax: 10000,
+      timeout: 30000, // ← longer timeout for Render wake-up
+      withCredentials: true, // ← add this for CORS
+      extraHeaders: {
+        Authorization: `Bearer ${token}`, // ← send token in header, not URL
+      },
     });
     socketRef.current = socket;
 
