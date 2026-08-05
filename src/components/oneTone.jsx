@@ -432,16 +432,15 @@ export default function WallbooksChat() {
   const { list } = useSelector((state) => state.dost);
 
   // ── Extract user ID correctly from the stored object ──────────────────────
-  const currentUserId = (() => {
+  const currentUserId = useMemo(() => {
     try {
       const raw = localStorage.getItem('user');
       const parsed = JSON.parse(raw);
-      // Handle both cases: stored as plain string ID or as object
       return typeof parsed === 'string' ? parsed : parsed?._id || parsed?.id;
     } catch {
       return localStorage.getItem('user');
     }
-  })();
+  }, []);
 
   console.log(currentUserId);
   const token = localStorage.getItem('auth');
