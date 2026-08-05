@@ -431,12 +431,10 @@ export default function WallbooksChat() {
   const dispatch = useDispatch();
   const { list } = useSelector((state) => state.dost);
 
-  // ── Extract user ID correctly from the stored object ──────────────────────
   const currentUserId = (() => {
     try {
       const raw = localStorage.getItem('user');
       const parsed = JSON.parse(raw);
-      // Handle both cases: stored as plain string ID or as object
       return typeof parsed === 'string' ? parsed : parsed?._id || parsed?.id;
     } catch {
       return localStorage.getItem('user');
@@ -445,28 +443,33 @@ export default function WallbooksChat() {
   const token = localStorage.getItem('auth');
 
   const [contacts, setContacts] = useState([]);
-  const [activeContactId, setActiveContactId] = useState(null); // ← store ID only
+  const [activeContactId, setActiveContactId] = useState(null);
   const [messagesByContact, setMessagesByContact] = useState({});
   const [typingContacts, setTypingContacts] = useState({});
   const [onlineUsers, setOnlineUsers] = useState(new Set());
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [socketReady, setSocketReady] = useState(false);
 
+  // FIX 1: Use a separate "loaded" flag so a 204 (empty list) doesn't hang forever.
+  // Previously `loading = list == null` would stay true if the API returns 204 with
+  // no body, because `list` would never be set and the LoadingScreen showed forever.
+  const [friendsLoaded, setFriendsLoaded] = useState(false);
+
   const socketRef = useRef(null);
   const chatEndRef = useRef(null);
   const typingTimerRef = useRef({});
 
-  // Derive full contact object from ID — never goes stale
   const activeContact = contacts.find((c) => c.id === activeContactId) || null;
 
-  // Block render until list arrives from Redux
-  const loading = list == null;
+  // FIX 1b: Safety timeout — if friends never resolves after 8 s, stop loading anyway
+  useEffect(() => {
+    const timer = setTimeout(() => setFriendsLoaded(true), 8000);
+    return () => clearTimeout(timer);
+  }, []);
 
-  // ── MUST be defined BEFORE the socket useEffect ───────────────────────────
   const appendMessage = useCallback((contactId, msg) => {
     setMessagesByContact((prev) => {
       const existing = prev[contactId] || [];
-      // Deduplicate by _id to prevent double-render from ACK + optimistic
       if (msg._id && existing.some((m) => String(m._id) === String(msg._id))) {
         return prev;
       }
@@ -480,8 +483,14 @@ export default function WallbooksChat() {
   }, [dispatch, token]);
 
   // ── 2. Map friends list → contacts ───────────────────────────────────────
+  // FIX 2: Added `onlineUsers` to dependency array so online dots update
+  // immediately when socket emits user:online/offline, not just on list refresh.
+  // Also mark friendsLoaded = true here so 204 (empty array) exits the loader.
   useEffect(() => {
-    if (!list?.length) return;
+    // list can be null (not yet fetched), undefined, or [] (204 / no friends)
+    if (list == null) return; // still waiting for Redux action to settle
+    setFriendsLoaded(true);
+    if (!list.length) return; // 204 / genuinely no friends — keep contacts []
     setContacts((prev) =>
       list.map((f) => {
         const existing = prev.find((c) => c.id === f.userId);
@@ -491,23 +500,35 @@ export default function WallbooksChat() {
           avatar: f.profilePic,
           preview: existing?.preview || '',
           time: existing?.time || '',
-          online: onlineUsers.has(f.userId),
+          online: onlineUsers.has(f.userId), // FIX 2: live online state
           active: existing?.active || false,
         };
       })
     );
-  }, [list]);
+  }, [list, onlineUsers]); // FIX 2: onlineUsers in deps
 
   // ── 3. Socket.io connection ───────────────────────────────────────────────
+  // FIX 3: Improved socket config for Render.com cold-starts.
+  //   - Start with polling only; let socket.io upgrade to WS once stable.
+  //   - Increased timeout to survive cold-start latency (~10-15 s on free tier).
+  //   - Added connect_error handler so errors are visible but non-fatal.
+  //   - Added reconnectionDelayMax + randomizationFactor to avoid thundering herd.
   useEffect(() => {
     if (!currentUserId) return;
 
     const socket = io(`${BACKEND_URL}/private`, {
-      transports: ['polling', 'websocket'], // polling first — survives Render cold start
+      // FIX 3a: Start with polling only. Once polling handshake succeeds, socket.io
+      // will automatically upgrade to WebSocket. This prevents the "WebSocket closed
+      // before connection established" error caused by Render cold-start latency.
+      transports: ['polling', 'websocket'],
+      upgrade: true, // allow upgrade after polling is stable
+      rememberUpgrade: false, // don't skip polling on reconnect (Render wakes up slowly)
       reconnection: true,
-      reconnectionAttempts: 10,
+      reconnectionAttempts: 15,
       reconnectionDelay: 2000,
-      timeout: 20000,
+      reconnectionDelayMax: 10000, // FIX 3b: cap backoff at 10 s
+      randomizationFactor: 0.5, // FIX 3c: jitter to avoid thundering herd
+      timeout: 30000, // FIX 3d: 30 s to survive Render cold start (~15 s)
     });
 
     socketRef.current = socket;
@@ -516,6 +537,12 @@ export default function WallbooksChat() {
       console.log('[Socket] connected:', socket.id);
       socket.emit('user:register', currentUserId);
       setSocketReady(true);
+    });
+
+    // FIX 3e: Log connect errors — they're now visible without crashing the UI
+    socket.on('connect_error', (err) => {
+      console.warn('[Socket] connect error:', err.message);
+      // Don't set socketReady=false here; a reconnect attempt will set it true again
     });
 
     socket.on('user:online', (userId) => {
@@ -536,10 +563,8 @@ export default function WallbooksChat() {
       );
     });
 
-    // ── Incoming message from partner ─────────────────────────────────────
     socket.on('private:message', (msg) => {
       const partnerId = msg.sender;
-      // Deduplicate before appending
       setMessagesByContact((prev) => {
         const existing = prev[partnerId] || [];
         if (msg._id && existing.some((m) => String(m._id) === String(msg._id)))
@@ -565,9 +590,6 @@ export default function WallbooksChat() {
       );
     });
 
-    // ── ACK from server after we sent a message ────────────────────────────
-    // Replace the optimistic message (matched by _tempId) with the confirmed one.
-    // If no match found, do NOT append — the optimistic is already showing.
     socket.on('private:message:sent', (msg) => {
       const partnerId = msg.receiver;
       setMessagesByContact((prev) => {
@@ -576,17 +598,14 @@ export default function WallbooksChat() {
           (m) => m._tempId && m.message === msg.message && m.isSent
         );
         if (tempIndex !== -1) {
-          // Replace optimistic with confirmed message
           const updated = [...msgs];
           updated[tempIndex] = { ...msg, isSent: true };
           return { ...prev, [partnerId]: updated };
         }
-        // No optimistic found — still don't double-add, just return prev
         return prev;
       });
     });
 
-    // ── Read receipts ──────────────────────────────────────────────────────
     socket.on('private:message:read', ({ messageIds }) => {
       setMessagesByContact((prev) => {
         const updated = { ...prev };
@@ -599,7 +618,6 @@ export default function WallbooksChat() {
       });
     });
 
-    // ── Typing indicator ───────────────────────────────────────────────────
     socket.on('private:typing', ({ from, isTyping }) => {
       setTypingContacts((prev) => ({ ...prev, [from]: isTyping }));
       clearTimeout(typingTimerRef.current[from]);
@@ -611,8 +629,8 @@ export default function WallbooksChat() {
       }
     });
 
-    socket.on('disconnect', () => {
-      console.log('[Socket] disconnected');
+    socket.on('disconnect', (reason) => {
+      console.log('[Socket] disconnected:', reason);
       setSocketReady(false);
     });
 
@@ -620,12 +638,12 @@ export default function WallbooksChat() {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [currentUserId]); // appendMessage removed from deps — it's stable via useCallback
+  }, [currentUserId]);
 
   // ── 4. Load history when active contact changes ───────────────────────────
   useEffect(() => {
     if (!activeContactId || !socketRef.current || !socketReady) return;
-    if (messagesByContact[activeContactId]?.length) return; // already loaded
+    if (messagesByContact[activeContactId]?.length) return;
 
     socketRef.current.emit('private:history', {
       userId: currentUserId,
@@ -657,7 +675,7 @@ export default function WallbooksChat() {
     return () => {
       socketRef.current?.off('private:history', handleHistory);
     };
-  }, [activeContactId, socketReady]); // ← stable string ID, not object
+  }, [activeContactId, socketReady]);
 
   // ── 5. Auto-scroll ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -669,7 +687,7 @@ export default function WallbooksChat() {
     setContacts((prev) =>
       prev.map((c) => ({ ...c, active: c.id === contact.id }))
     );
-    setActiveContactId(contact.id); // ← ID only
+    setActiveContactId(contact.id);
     setSidebarOpen(false);
   };
 
@@ -685,12 +703,10 @@ export default function WallbooksChat() {
       status: 'sent',
       createdAt: new Date().toISOString(),
     };
-    // Add optimistic message immediately
     setMessagesByContact((prev) => ({
       ...prev,
       [activeContactId]: [...(prev[activeContactId] || []), optimistic],
     }));
-    // Update contact preview
     setContacts((prev) =>
       prev.map((c) =>
         c.id === activeContactId
@@ -726,7 +742,8 @@ export default function WallbooksChat() {
     ? messagesByContact[activeContactId] || []
     : [];
 
-  if (loading) return <LoadingScreen />;
+  // FIX 1: Use friendsLoaded instead of `list == null` so a 204 doesn't hang forever
+  if (!friendsLoaded) return <LoadingScreen />;
 
   return (
     <>
