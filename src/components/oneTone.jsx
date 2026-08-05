@@ -502,15 +502,9 @@ export default function WallbooksChat() {
   const dispatch = useDispatch();
   const { list } = useSelector((state) => state.dost);
 
-  const currentUserId = (() => {
-    try {
-      const raw = localStorage.getItem('user');
-      const parsed = JSON.parse(raw);
-      return typeof parsed === 'string' ? parsed : parsed?._id || parsed?.id;
-    } catch {
-      return localStorage.getItem('user');
-    }
-  })();
+  const id = JSON.parse(localStorage.getItem('user'));
+  const currentUserId = id.id;
+
   const token = localStorage.getItem('auth');
 
   const [contacts, setContacts] = useState([]);
@@ -566,8 +560,8 @@ export default function WallbooksChat() {
       transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionAttempts: 10,
-      reconnectionDelay: 2000,
-      timeout: 20000,
+      reconnectionDelay: 3000,
+      timeout: 30000,
     });
 
     socketRef.current = socket;
